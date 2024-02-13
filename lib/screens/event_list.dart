@@ -5,6 +5,7 @@ import 'package:opscheck/modal/modal_events.dart';
 import 'package:intl/intl.dart';
 import 'participant_list.dart';
 
+//Listing events with respect to current date
 class EventListScreen extends StatefulWidget {
   const EventListScreen({super.key});
 
