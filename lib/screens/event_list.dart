@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:opscheck/modal/modal_events.dart';
-import 'package:intl/intl.dart';
-import 'participant_list.dart';
+import 'package:opscheck/modal/modal_events.dart'; // Importing Event model
+import 'package:intl/intl.dart'; // Importing date formatting utilities
+import 'participant_list.dart'; // Importing ParticipantListScreen
 
 //Listing events with respect to current date
 class EventListScreen extends StatefulWidget {
@@ -17,7 +17,6 @@ class _EventListScreenState extends State<EventListScreen> {
   List<Event> _events = [];
   List<Event> _newEvents = [];
   DateTime _selectedDate = DateTime.now(); // Initialize with current date
-  // bool _isLoading = false;
   ValueNotifier<bool> _isLoading =
       ValueNotifier(false); // Flag to track whether events are being loaded
 
@@ -25,7 +24,7 @@ class _EventListScreenState extends State<EventListScreen> {
   void initState() {
     super.initState();
     _fetchEventsForSelectedDate(
-        _selectedDate); // Fetch events for selected date
+        _selectedDate); // Fetch events for selected date when screen initializes
   }
 
   // Function to format the time
@@ -39,17 +38,15 @@ class _EventListScreenState extends State<EventListScreen> {
     return formattedTime;
   }
 
+  // Function to get date part only
   static DateTime dateOnly(DateTime date) {
     return DateTime(date.year, date.month, date.day);
   }
 
+  // Function to fetch events for a selected date
   Future<List<Event>> _fetchEventsForSelectedDate(DateTime selectedDate) async {
-    print('Selected data: ' + selectedDate.toString());
-    print('loaing');
-    // setState(() {
     _isLoading.value =
         true; // Set loading flag to true when starting to fetch events
-    // });
     try {
       final response =
           await http.get(Uri.parse('http://10.0.2.2:3000/api/v1/events'));
@@ -57,17 +54,15 @@ class _EventListScreenState extends State<EventListScreen> {
         final parsedResponse = json.decode(response.body);
         final events = parsedResponse['data']['events'] as List;
 
+        // Filter events for the selected date
         _events = events
             .map((eventJson) => Event.fromJson(eventJson))
             .where((event) => DateTime.parse(event.date)
                 .isAtSameMomentAs(dateOnly(_selectedDate)))
             .toList();
-        print('Qaz' + _events.toString());
+
         _events.sort((a, b) => a.date.compareTo(b.date)); // Sort events by date
         _newEvents = _events;
-        // Set loading flag to false after events are fetched
-
-        print(_events);
       } else {
         throw Exception('Failed to load events');
       }
@@ -75,13 +70,12 @@ class _EventListScreenState extends State<EventListScreen> {
       print('Error fetching events: $error');
       // Handle error appropriately, e.g., show error message to user
     }
-    // setState(() {
-    _isLoading.value = false;
-    // });
+    _isLoading.value =
+        false; // Set loading flag to false after events are fetched
     return _newEvents;
-    // setState(() {});
   }
 
+  // Function to select a date
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -89,7 +83,6 @@ class _EventListScreenState extends State<EventListScreen> {
       firstDate: DateTime(2020),
       lastDate: DateTime(2101),
     );
-    print(picked);
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
@@ -101,7 +94,6 @@ class _EventListScreenState extends State<EventListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    print(_events);
     return ValueListenableBuilder(
         valueListenable: _isLoading,
         builder: (BuildContext context, bool isLoading, Widget? child) {
