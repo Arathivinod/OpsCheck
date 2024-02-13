@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:opscheck/screens/splash.dart';
+import 'package:opscheck/screens/loginpage.dart';
 
 void main() {
   runApp(const MyApp());
@@ -11,11 +11,15 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'OpsCheck',
       theme: ThemeData(
         primarySwatch: Colors.deepPurple,
       ),
-      home: SplashScreen(),
+      home: const LoginScreen(),
     );
   }
 }
+
+
+
