@@ -78,10 +78,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   if (_formKey.currentState!.validate()) {
                     _formKey.currentState!.save();
 
-                    Navigator.push(
+                    Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(
                           builder: (context) => EventListScreen()),
+                      (route) => false,
                     );
                   }
                 },
