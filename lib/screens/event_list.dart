@@ -15,13 +15,12 @@ class EventListScreen extends StatefulWidget {
 class _EventListScreenState extends State<EventListScreen> {
   late List<EventByDate> _eventsByDate = [];
   late DateTime _selectedDate = DateTime.now();
-  bool _isLoading = false;
+  late ValueNotifier<bool> _isLoadingNotifier = ValueNotifier<bool>(false);
 
   @override
   void initState() {
     super.initState();
     _fetchEventsByDate(_selectedDate);
-    print("Current Date: ${DateFormat('yyyy-MM-dd').format(_selectedDate)}");
   }
 
   DateTime dateOnly(DateTime dateTime) {
@@ -29,15 +28,11 @@ class _EventListScreenState extends State<EventListScreen> {
   }
 
   Future<void> _fetchEventsByDate(DateTime date) async {
-    setState(() {
-      _isLoading = true;
-    });
+    _isLoadingNotifier.value = true;
 
     try {
       final response = await http
           .get(Uri.parse('http://10.0.2.2:3000/api/v1/analytics?limit=5000'));
-
-      print('API Response: ${response.statusCode} ${response.body}');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = jsonDecode(response.body);
@@ -48,20 +43,15 @@ class _EventListScreenState extends State<EventListScreen> {
               .where((eventByDate) =>
                   _isSameDay(dateOnly(eventByDate.date), dateOnly(date)))
               .toList();
-          _isLoading = false;
         });
-
-        print("Filtered events: $_eventsByDate");
-        print("Selected Date: $date");
       } else {
         throw Exception(
             'Failed to fetch events. Status Code: ${response.statusCode}');
       }
     } catch (error) {
       print('Error fetching events: $error');
-      setState(() {
-        _isLoading = false;
-      });
+    } finally {
+      _isLoadingNotifier.value = false;
     }
   }
 
@@ -83,7 +73,6 @@ class _EventListScreenState extends State<EventListScreen> {
         _selectedDate = pickedDate;
       });
       await _fetchEventsByDate(_selectedDate);
-      print("Selected Date: ${DateFormat('yyyy-MM-dd').format(_selectedDate)}");
     }
   }
 
@@ -106,16 +95,21 @@ class _EventListScreenState extends State<EventListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Event List',
+          'Events',
           style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: Colors.blue, // App bar color
+        backgroundColor: Colors.blue,
+        iconTheme: IconThemeData(color: Colors.white), // App bar color
       ),
-      body: _isLoading
-          ? Center(
+      body: ValueListenableBuilder<bool>(
+        valueListenable: _isLoadingNotifier,
+        builder: (context, isLoading, child) {
+          if (isLoading) {
+            return Center(
               child: CircularProgressIndicator(),
-            )
-          : Column(
+            );
+          } else {
+            return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
@@ -181,11 +175,12 @@ class _EventListScreenState extends State<EventListScreen> {
                                       margin: EdgeInsets.symmetric(
                                           vertical: 5, horizontal: 10),
                                       decoration: BoxDecoration(
-                                        color: Colors.white,
+                                        color:
+                                            Color.fromARGB(255, 243, 249, 255),
                                         borderRadius: BorderRadius.circular(10),
                                         border: Border.all(
-                                          color: Colors.grey, // Border color
-                                          // Border width
+                                          color: Colors.blue,
+                                          width: 0.5,
                                         ),
                                       ),
                                       child: ListTile(
@@ -215,7 +210,10 @@ class _EventListScreenState extends State<EventListScreen> {
                         ),
                 ),
               ],
-            ),
+            );
+          }
+        },
+      ),
     );
   }
 
