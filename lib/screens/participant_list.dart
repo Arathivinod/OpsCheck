@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:opscheck/modal/modal.dart';
+import 'summary_report.dart';
 
 class ModeIcon extends StatelessWidget {
   final IconData icon;
@@ -41,8 +42,8 @@ class ParticipantListScreen extends StatefulWidget {
 class _ParticipantListScreenState extends State<ParticipantListScreen> {
   List<Participant> _participants = [];
   bool _isLoading = false;
-  String _eventName = ''; // Define _eventName variable
-  String _category = ''; // Define category variable
+  String _eventName = '';
+  String _category = '';
 
   @override
   void initState() {
@@ -94,8 +95,8 @@ class _ParticipantListScreenState extends State<ParticipantListScreen> {
       final response = await http.patch(
         Uri.parse('http://10.0.2.2:3000/api/v1/analytics/${widget.eventId}'),
         body: json.encode({
-          'participantId': participantId, // Add participantId to the body
-          'participationMode': mode, // Correct the key to 'participationMode'
+          'participantId': participantId,
+          'participationMode': mode,
           'date': DateFormat('yyyy-MM-dd').format(date)
         }),
         headers: {'Content-Type': 'application/json'},
@@ -119,6 +120,7 @@ class _ParticipantListScreenState extends State<ParticipantListScreen> {
           style: TextStyle(color: Colors.white),
         ),
         backgroundColor: Colors.blue,
+        iconTheme: IconThemeData(color: Colors.white),
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
@@ -127,36 +129,77 @@ class _ParticipantListScreenState extends State<ParticipantListScreen> {
                 Container(
                   margin: EdgeInsets.symmetric(vertical: 6, horizontal: 10),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              '$_eventName - $_category',
-                              style: TextStyle(
-                                fontWeight: FontWeight.normal,
-                                fontSize: 20,
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => EventDetailsScreen(
+                                eventName: _eventName,
+                                category: _category,
+                                officeParticipants: _participants
+                                    .where((p) => p.participationMode == 1)
+                                    .length,
+                                wfhParticipants: _participants
+                                    .where((p) => p.participationMode == 2)
+                                    .length,
+                                absentParticipants: _participants
+                                    .where((p) => p.participationMode == 3)
+                                    .length,
                               ),
                             ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          primary: Colors.blue,
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                          Spacer(),
-                          ModeIcon(
-                            icon: Icons.work,
-                            color: Colors.blue,
-                            label: 'Office',
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          child: Text(
+                            '$_eventName - $_category',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
-                          ModeIcon(
-                            icon: Icons.home,
-                            color: Colors.green,
-                            label: 'WFH',
-                          ),
-                          ModeIcon(
-                            icon: Icons.not_interested,
-                            color: Colors.red,
-                            label: 'Absent',
-                          ),
-                        ],
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                      Container(
+                        margin: EdgeInsets.zero,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            // Padding(
+                            //     padding:
+                            //         const EdgeInsets.symmetric(horizontal: 2)),
+                            Spacer(),
+                            ModeIcon(
+                              icon: Icons.work,
+                              color: Colors.blue,
+                              label: 'Office',
+                            ),
+                            // SizedBox(width: 1),
+                            ModeIcon(
+                              icon: Icons.home,
+                              color: Colors.green,
+                              label: 'WFH',
+                            ),
+                            // SizedBox(width: 0),
+                            ModeIcon(
+                              icon: Icons.not_interested,
+                              color: Colors.red,
+                              label: 'Absent',
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -168,12 +211,13 @@ class _ParticipantListScreenState extends State<ParticipantListScreen> {
                       final participant = _participants[index];
                       return Container(
                         margin:
-                            EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                            EdgeInsets.symmetric(vertical: 3, horizontal: 7),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Color.fromARGB(255, 243, 249, 255),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
                             color: Colors.blue,
+                            width: 0.5,
                           ),
                         ),
                         child: Row(
