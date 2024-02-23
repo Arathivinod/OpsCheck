@@ -32,14 +32,15 @@ class ModeIcon extends StatelessWidget {
 
 class ParticipantListScreen extends StatefulWidget {
   final int eventId;
+  final DateTime eventDate;
 
-  ParticipantListScreen({required this.eventId});
+  const ParticipantListScreen({required this.eventId, required this.eventDate});
 
   @override
-  _ParticipantListScreenState createState() => _ParticipantListScreenState();
+  ParticipantListScreenState createState() => ParticipantListScreenState();
 }
 
-class _ParticipantListScreenState extends State<ParticipantListScreen> {
+class ParticipantListScreenState extends State<ParticipantListScreen> {
   List<Participant> _participants = [];
   bool _isLoading = false;
   String _eventName = '';
@@ -57,8 +58,9 @@ class _ParticipantListScreenState extends State<ParticipantListScreen> {
     });
 
     try {
-      final response = await http.get(
-          Uri.parse('http://10.0.2.2:3000/api/v1/analytics/${widget.eventId}'));
+      final formattedDate = DateFormat('yyyy-MM-dd').format(widget.eventDate);
+      final response = await http.get(Uri.parse(
+          'http://10.0.2.2:3000/api/v1/analytics/${widget.eventId}?date=$formattedDate'));
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         final List<dynamic> participantsData =
@@ -82,7 +84,7 @@ class _ParticipantListScreenState extends State<ParticipantListScreen> {
         throw Exception('Failed to load participants');
       }
     } catch (error) {
-      print('Error fetching participants: $error');
+      // print('Error fetching participants: $error');
       setState(() {
         _isLoading = false;
       });
@@ -115,19 +117,20 @@ class _ParticipantListScreenState extends State<ParticipantListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           'Participants',
           style: TextStyle(color: Colors.white),
         ),
         backgroundColor: Colors.blue,
-        iconTheme: IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
                 Container(
-                  margin: EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                  margin:
+                      const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -153,7 +156,7 @@ class _ParticipantListScreenState extends State<ParticipantListScreen> {
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          primary: Colors.blue,
+                          backgroundColor: Colors.blue,
                           elevation: 4,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
@@ -163,7 +166,7 @@ class _ParticipantListScreenState extends State<ParticipantListScreen> {
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           child: Text(
                             '$_eventName - $_category',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
@@ -171,10 +174,10 @@ class _ParticipantListScreenState extends State<ParticipantListScreen> {
                           ),
                         ),
                       ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 10),
                       Container(
                         margin: EdgeInsets.zero,
-                        child: Row(
+                        child: const Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             // Padding(
@@ -210,10 +213,10 @@ class _ParticipantListScreenState extends State<ParticipantListScreen> {
                     itemBuilder: (BuildContext context, int index) {
                       final participant = _participants[index];
                       return Container(
-                        margin:
-                            EdgeInsets.symmetric(vertical: 3, horizontal: 7),
+                        margin: const EdgeInsets.symmetric(
+                            vertical: 3, horizontal: 7),
                         decoration: BoxDecoration(
-                          color: Color.fromARGB(255, 243, 249, 255),
+                          color: const Color.fromARGB(255, 243, 249, 255),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
                             color: Colors.blue,
@@ -246,7 +249,8 @@ class _ParticipantListScreenState extends State<ParticipantListScreen> {
                               ),
                             ),
                             Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 5),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 5),
                               child: IconButton(
                                 icon: Icon(Icons.home,
                                     color: participant.participationMode == 2
