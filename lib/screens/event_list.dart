@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
-import 'package:opscheck/modal/modal.dart'; // Importing Event model
+import 'package:opscheck/modal/modal.dart';
 import 'participant_list.dart';
+import 'package:date_picker_timeline/date_picker_timeline.dart';
 
 class EventListScreen extends StatefulWidget {
   const EventListScreen({Key? key}) : super(key: key);
@@ -16,6 +17,7 @@ class EventListScreenState extends State<EventListScreen> {
   late List<EventByDate> _eventsByDate = [];
   late DateTime _selectedDate = DateTime.now();
   final ValueNotifier<bool> _isLoadingNotifier = ValueNotifier<bool>(false);
+  final DatePickerController _controller = DatePickerController();
 
   @override
   void initState() {
@@ -62,35 +64,6 @@ class EventListScreenState extends State<EventListScreen> {
         date1.day == date2.day;
   }
 
-  Future<void> _selectDate(BuildContext context) async {
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-    );
-    if (pickedDate != null && pickedDate != _selectedDate) {
-      setState(() {
-        _selectedDate = pickedDate;
-      });
-      await _fetchEventsByDate(_selectedDate);
-    }
-  }
-
-  void _nextDate() async {
-    setState(() {
-      _selectedDate = _selectedDate.add(const Duration(days: 1));
-    });
-    await _fetchEventsByDate(_selectedDate);
-  }
-
-  void _previousDate() async {
-    setState(() {
-      _selectedDate = _selectedDate.subtract(const Duration(days: 1));
-    });
-    await _fetchEventsByDate(_selectedDate);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -100,132 +73,158 @@ class EventListScreenState extends State<EventListScreen> {
           style: TextStyle(color: Colors.white),
         ),
         backgroundColor: Colors.blue,
-        iconTheme: const IconThemeData(color: Colors.white), // App bar color
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: ValueListenableBuilder<bool>(
-        valueListenable: _isLoadingNotifier,
-        builder: (context, isLoading, child) {
-          if (isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          } else {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(4.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        onPressed: _previousDate,
-                        icon: const Icon(Icons.arrow_back),
-                        color: Colors.blue,
-                      ),
-                      ElevatedButton(
-                        onPressed: () => _selectDate(context),
-                        style: ButtonStyle(
-                          shape:
-                              MaterialStateProperty.all<RoundedRectangleBorder>(
-                            RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10.0),
-                            ),
-                          ),
-                          backgroundColor:
-                              MaterialStateProperty.all(Colors.blue),
-                          elevation: MaterialStateProperty.all(
-                              0.0), // Remove elevation
-                        ),
-                        child: Text(
-                          ' ${DateFormat('dd-MM-yyyy').format(_selectedDate)}  ${DateFormat('EEEE').format(_selectedDate)}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
+                GestureDetector(
+                  onTap: () {
+                    // Open date picker dialog here
+                    showDatePicker(
+                      context: context,
+                      initialDate: _selectedDate,
+                      firstDate: DateTime.now().subtract(
+                          Duration(days: 3)), // 3 days before the current date
+                      lastDate: DateTime.now().add(
+                          Duration(days: 7)), // 7 days from the current date
+                    ).then((selectedDate) {
+                      if (selectedDate != null) {
+                        setState(() {
+                          _selectedDate = selectedDate;
+                        });
+                        _fetchEventsByDate(_selectedDate);
+                        _controller
+                            .animateToSelection(); // Update the timeline to reflect the selected date
+                      }
+                    });
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
+                      children: [
+                        Text(
+                          'Select Date ',
+                          style: TextStyle(
+                            color: Colors.blue,
                             fontWeight: FontWeight.bold,
+                            fontSize: 16,
                           ),
                         ),
-                      ),
-                      IconButton(
-                        onPressed: _nextDate,
-                        icon: const Icon(Icons.arrow_forward),
-                        color: Colors.blue,
-                      ),
-                    ],
+                        Icon(Icons.calendar_today, color: Colors.blue),
+                      ],
+                    ),
                   ),
                 ),
-                Expanded(
-                  child: _eventsByDate.isEmpty
-                      ? const Center(
-                          child: Text('No events for selected date'),
-                        )
-                      : ListView.builder(
-                          itemCount: _eventsByDate.length,
-                          itemBuilder: (context, index) {
-                            final eventByDate = _eventsByDate[index];
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                ListView.builder(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: eventByDate.events.length,
-                                  itemBuilder: (context, index) {
-                                    final event = eventByDate.events[index];
-                                    return Container(
-                                      margin: const EdgeInsets.symmetric(
-                                          vertical: 5, horizontal: 10),
-                                      decoration: BoxDecoration(
-                                        color: const Color.fromARGB(
-                                            255, 243, 249, 255),
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(
-                                          color: Colors.blue,
-                                          width: 0.5,
-                                        ),
-                                      ),
-                                      child: ListTile(
-                                        title: Text(
-                                            '${event.eventName} - ${event.category}'),
-                                        subtitle: Text(
-                                          'Time: ${_formatTime(event.time)}',
-                                        ),
-                                        onTap: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  ParticipantListScreen(
-                                                eventId: event.eventId,
-                                                eventDate: _selectedDate,
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                ),
               ],
-            );
-          }
-        },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4.0),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  SizedBox(
+                    height: 90,
+                    width: MediaQuery.of(context).size.width,
+                    child: DatePicker(
+                      DateTime.now().subtract(Duration(days: 3)),
+                      controller: _controller,
+                      initialSelectedDate: _selectedDate,
+                      selectionColor: Colors.blue,
+                      selectedTextColor: Colors.white,
+                      onDateChange: (date) async {
+                        setState(() {
+                          _selectedDate = date;
+                        });
+                        await _fetchEventsByDate(_selectedDate);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: ValueListenableBuilder<bool>(
+              valueListenable: _isLoadingNotifier,
+              builder: (context, isLoading, child) {
+                if (isLoading) {
+                  return Center(
+                    child: CircularProgressIndicator(),
+                  );
+                } else {
+                  return ListView(
+                    children: _eventsByDate.isEmpty
+                        ? [
+                            Center(
+                              child: Text('No events for selected date'),
+                            ),
+                          ]
+                        : _eventsByDate
+                            .expand(
+                              (eventByDate) => eventByDate.events.map(
+                                (event) => Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 5, horizontal: 10),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: const Color.fromARGB(
+                                        255,
+                                        243,
+                                        249,
+                                        255,
+                                      ),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: Colors.blue,
+                                        width: 0.5,
+                                      ),
+                                    ),
+                                    child: ListTile(
+                                      title: Text(
+                                        '${event.eventName} - ${event.category}',
+                                      ),
+                                      subtitle: Text(
+                                        'Time: ${_formatTime(event.time)}',
+                                      ),
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                ParticipantListScreen(
+                                              eventId: event.eventId,
+                                              eventDate: _selectedDate,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                  );
+                }
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 
   String _formatTime(String time) {
-    // Convert the time string to a DateTime object
     DateTime parsedTime = DateFormat('HH:mm').parse(time);
-
-    // Format the DateTime object into AM/PM format
     String formattedTime = DateFormat('h:mm a').format(parsedTime);
-
     return formattedTime;
   }
 }

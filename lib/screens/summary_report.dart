@@ -23,7 +23,7 @@ class ModeIcon extends StatelessWidget {
   }
 }
 
-class EventDetailsScreen extends StatelessWidget {
+class EventDetailsScreen extends StatefulWidget {
   final String eventName;
   final String category;
   final int officeParticipants;
@@ -39,12 +39,22 @@ class EventDetailsScreen extends StatelessWidget {
   });
 
   @override
+  _EventDetailsScreenState createState() => _EventDetailsScreenState();
+}
+
+class _EventDetailsScreenState extends State<EventDetailsScreen> {
+  String _selectedTimeRange = 'Today';
+
+  @override
   Widget build(BuildContext context) {
-    final totalParticipants =
-        officeParticipants + wfhParticipants + absentParticipants;
-    final presentParticipants = officeParticipants + wfhParticipants;
+    final totalParticipants = widget.officeParticipants +
+        widget.wfhParticipants +
+        widget.absentParticipants;
+    final presentParticipants =
+        widget.officeParticipants + widget.wfhParticipants;
     final presentPercentage = (presentParticipants / totalParticipants) * 100;
-    final absentPercentage = (absentParticipants / totalParticipants) * 100;
+    final absentPercentage =
+        (widget.absentParticipants / totalParticipants) * 100;
 
     return Scaffold(
       appBar: AppBar(
@@ -59,49 +69,73 @@ class EventDetailsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              // margin: EdgeInsets.symmetric(horizontal: 10.0),
+            Padding(
               padding: const EdgeInsets.all(10),
-              child: Center(
-                child: Text(
-                  '$eventName - $category',
-                  style: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.bold),
-                ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment
+                    .spaceBetween, // Aligns children to the start and end of the row
+                children: [
+                  Text(
+                    '${widget.eventName} - ${widget.category}',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  DropdownButton<String>(
+                    value: _selectedTimeRange,
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        _selectedTimeRange = newValue!;
+                      });
+                    },
+                    items: <String>[
+                      'Today',
+                      'This Week',
+                      'This Month',
+                      'Custom'
+                    ].map<DropdownMenuItem<String>>((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                  ),
+                ],
               ),
             ),
-
-            Container(
-              margin: const EdgeInsets.all(11),
-              padding: const EdgeInsets.all(7),
+            Padding(
+              padding: const EdgeInsets.all(11),
               child: Table(
                 border: TableBorder.all(),
                 children: [
                   const TableRow(
                     children: [
                       TableCell(
+                        verticalAlignment: TableCellVerticalAlignment.middle,
                         child: Center(
                           child: Padding(
-                            padding: const EdgeInsets.all(5.0),
+                            padding: EdgeInsets.all(5.0),
                             child: Text(
                               'Present',
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ),
                         ),
-                        verticalAlignment: TableCellVerticalAlignment.middle,
                       ),
                       TableCell(
+                        verticalAlignment: TableCellVerticalAlignment.middle,
                         child: Center(
                           child: Padding(
-                            padding: const EdgeInsets.all(5.0),
+                            padding: EdgeInsets.all(5.0),
                             child: Text(
-                              'Absent',
+                              'Not attended',
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ),
                         ),
-                        verticalAlignment: TableCellVerticalAlignment.middle,
                       ),
                     ],
                   ),
@@ -113,7 +147,7 @@ class EventDetailsScreen extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Padding(
-                              padding: const EdgeInsets.all(5.0),
+                              padding: EdgeInsets.all(5.0),
                               child: ModeIcon(
                                 icon: Icons.home,
                                 color: Colors.green,
@@ -121,13 +155,12 @@ class EventDetailsScreen extends StatelessWidget {
                               ),
                             ),
                             Padding(
-                              padding: const EdgeInsets.all(5.0),
-                              child: Text(
-                                '${wfhParticipants.toString()}',
-                              ),
+                              padding: EdgeInsets.all(5.0),
+                              child:
+                                  Text('${widget.wfhParticipants.toString()}'),
                             ),
                             Padding(
-                              padding: const EdgeInsets.all(5.0),
+                              padding: EdgeInsets.all(5.0),
                               child: ModeIcon(
                                 icon: Icons.work,
                                 color: Colors.blue,
@@ -135,10 +168,9 @@ class EventDetailsScreen extends StatelessWidget {
                               ),
                             ),
                             Padding(
-                              padding: const EdgeInsets.all(5.0),
+                              padding: EdgeInsets.all(5.0),
                               child: Text(
-                                '${officeParticipants.toString()}',
-                              ),
+                                  '${widget.officeParticipants.toString()}'),
                             ),
                           ],
                         ),
@@ -147,10 +179,9 @@ class EventDetailsScreen extends StatelessWidget {
                         verticalAlignment: TableCellVerticalAlignment.middle,
                         child: Center(
                           child: Padding(
-                            padding: const EdgeInsets.all(5.0),
-                            child: Text(
-                              '${absentParticipants.toString()}',
-                            ),
+                            padding: EdgeInsets.all(5.0),
+                            child:
+                                Text('${widget.absentParticipants.toString()}'),
                           ),
                         ),
                       ),
@@ -159,7 +190,6 @@ class EventDetailsScreen extends StatelessWidget {
                 ],
               ),
             ),
-            // SizedBox(height: 8),
             Container(
               margin: EdgeInsets.symmetric(horizontal: 15.0),
               padding: EdgeInsets.all(8),
@@ -183,7 +213,6 @@ class EventDetailsScreen extends StatelessWidget {
                         showTitles: true,
                         reservedSize: 28,
                         getTitlesWidget: (value, _) {
-                          // Define your widget or use a function to generate the widget here
                           const TextStyle textStyle =
                               TextStyle(color: Colors.black, fontSize: 14);
                           switch (value.toInt()) {
@@ -198,7 +227,7 @@ class EventDetailsScreen extends StatelessWidget {
                                 style: textStyle,
                               );
                             default:
-                              return const SizedBox(); // Return an empty SizedBox for other values
+                              return SizedBox();
                           }
                         },
                       ),
@@ -216,7 +245,7 @@ class EventDetailsScreen extends StatelessWidget {
                       x: 0,
                       barRods: [
                         BarChartRodData(
-                          toY: wfhParticipants.toDouble(),
+                          toY: widget.wfhParticipants.toDouble(),
                           color: Colors.green,
                         ),
                       ],
@@ -225,7 +254,7 @@ class EventDetailsScreen extends StatelessWidget {
                       x: 1,
                       barRods: [
                         BarChartRodData(
-                          toY: officeParticipants.toDouble(),
+                          toY: widget.officeParticipants.toDouble(),
                           color: Colors.blue,
                         ),
                       ],
@@ -234,7 +263,7 @@ class EventDetailsScreen extends StatelessWidget {
                 ),
               ),
             ),
-
+            SizedBox(height: 20),
             Stack(
               children: [
                 Container(
@@ -275,8 +304,7 @@ class EventDetailsScreen extends StatelessWidget {
                       sectionsSpace: 0,
                       centerSpaceRadius: 40,
                     ),
-                    swapAnimationDuration:
-                        Duration(milliseconds: 150), // Optional
+                    swapAnimationDuration: Duration(milliseconds: 150),
                     swapAnimationCurve: Curves.linear,
                   ),
                 ),
@@ -287,10 +315,6 @@ class EventDetailsScreen extends StatelessWidget {
                 ),
               ],
             ),
-
-            // SizedBox(height: 20),
-            // LegendWidget(),
-            // SizedBox(height: 20),
           ],
         ),
       ),
@@ -308,7 +332,7 @@ class LegendWidget extends StatelessWidget {
         SizedBox(
           height: 10,
         ),
-        LegendItem(color: Colors.red, label: 'Absent'),
+        LegendItem(color: Colors.red, label: 'Not attended'),
       ],
     );
   }
