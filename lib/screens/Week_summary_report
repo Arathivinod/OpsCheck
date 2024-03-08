@@ -1,0 +1,28 @@
+import 'package:flutter/material.dart';
+
+class WeekSummary extends StatelessWidget {
+  final DateTime startDate;
+  final DateTime endDate;
+
+  WeekSummary({
+    required this.startDate,
+    required this.endDate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Fetch data for the week using the provided start and end dates
+    // You can call a method to fetch data here or in initState()
+    // For example:
+    // fetchData(startDate, endDate);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Week Summary'),
+      ),
+      body: Center(
+        child: Text('Start Date: $startDate, End Date: $endDate'),
+      ),
+    );
+  }
+}

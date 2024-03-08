@@ -40,8 +40,11 @@ class ParticipantListScreen extends StatefulWidget {
   ParticipantListScreenState createState() => ParticipantListScreenState();
 }
 
-class ParticipantListScreenState extends State<ParticipantListScreen> {
+class ParticipantListScreenState extends State<ParticipantListScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   List<Participant> _participants = [];
+  List<Participant> _originalParticipants = [];
   bool _isLoading = false;
   String _eventName = '';
   String _category = '';
@@ -49,7 +52,14 @@ class ParticipantListScreenState extends State<ParticipantListScreen> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _fetchParticipants();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchParticipants() async {
@@ -78,13 +88,15 @@ class ParticipantListScreenState extends State<ParticipantListScreen> {
                         ['participationMode'],
                   ))
               .toList();
+          _originalParticipants = List.from(_participants); // Copy list
+          _participants
+              .sort((a, b) => a.participantName.compareTo(b.participantName));
           _isLoading = false;
         });
       } else {
         throw Exception('Failed to load participants');
       }
     } catch (error) {
-      // print('Error fetching participants: $error');
       setState(() {
         _isLoading = false;
       });
@@ -104,7 +116,18 @@ class ParticipantListScreenState extends State<ParticipantListScreen> {
         headers: {'Content-Type': 'application/json'},
       );
       if (response.statusCode == 200) {
-        _fetchParticipants();
+        setState(() {
+          // Update mode in the original list without changing its position
+          final participantIndex = _originalParticipants
+              .indexWhere((p) => p.participantId == participantId);
+          if (participantIndex != -1) {
+            _originalParticipants[participantIndex].participationMode = mode;
+            _participants =
+                List.from(_originalParticipants); // Update displayed list
+            _participants
+                .sort((a, b) => a.participantName.compareTo(b.participantName));
+          }
+        });
       } else {
         throw Exception('Failed to update participation mode');
       }
@@ -115,179 +138,160 @@ class ParticipantListScreenState extends State<ParticipantListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Participants',
-          style: TextStyle(color: Colors.white),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Attendance'),
+          bottom: TabBar(
+            controller: _tabController,
+            tabs: [
+              Tab(text: 'Participants'),
+              Tab(text: 'Report'),
+            ],
+          ),
         ),
-        backgroundColor: Colors.blue,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                Container(
-                  margin:
-                      const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => EventDetailsScreen(
-                                eventName: _eventName,
-                                category: _category,
-                                officeParticipants: _participants
-                                    .where((p) => p.participationMode == 1)
-                                    .length,
-                                wfhParticipants: _participants
-                                    .where((p) => p.participationMode == 2)
-                                    .length,
-                                absentParticipants: _participants
-                                    .where((p) => p.participationMode == 3)
-                                    .length,
-                              ),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          elevation: 4,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          child: Text(
-                            '$_eventName - $_category',
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Container(
-                        margin: EdgeInsets.zero,
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            // Padding(
-                            //     padding:
-                            //         const EdgeInsets.symmetric(horizontal: 2)),
-                            Spacer(),
-                            ModeIcon(
-                              icon: Icons.work,
-                              color: Colors.blue,
-                              label: 'Office',
-                            ),
-                            // SizedBox(width: 1),
-                            ModeIcon(
-                              icon: Icons.home,
-                              color: Colors.green,
-                              label: 'WFH',
-                            ),
-                            // SizedBox(width: 0),
-                            ModeIcon(
-                              icon: Icons.not_interested,
-                              color: Colors.red,
-                              label: 'Absent',
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: _participants.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      final participant = _participants[index];
-                      return Container(
-                        margin: const EdgeInsets.symmetric(
-                            vertical: 3, horizontal: 7),
-                        decoration: BoxDecoration(
-                          color: const Color.fromARGB(255, 243, 249, 255),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: Colors.blue,
-                            width: 0.5,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: ListTile(
-                                title: Text(participant.participantName),
-                                subtitle:
-                                    Text('ID: ${participant.participantId}'),
-                              ),
-                            ),
-                            Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 5),
-                              child: IconButton(
-                                icon: Icon(Icons.work,
-                                    color: participant.participationMode == 1
-                                        ? Colors.blue
-                                        : Colors.grey),
-                                onPressed: () {
-                                  _updateParticipationMode(
-                                      participant.participantId,
-                                      1,
-                                      DateTime.now());
-                                },
-                              ),
-                            ),
-                            Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 5),
-                              child: IconButton(
-                                icon: Icon(Icons.home,
-                                    color: participant.participationMode == 2
-                                        ? Colors.green
-                                        : Colors.grey),
-                                onPressed: () {
-                                  _updateParticipationMode(
-                                      participant.participantId,
-                                      2,
-                                      DateTime.now());
-                                },
-                              ),
-                            ),
-                            Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 6),
-                              child: IconButton(
-                                icon: Icon(Icons.not_interested,
-                                    color: participant.participationMode == 3
-                                        ? Colors.red
-                                        : Colors.grey),
-                                onPressed: () {
-                                  _updateParticipationMode(
-                                      participant.participantId,
-                                      3,
-                                      DateTime.now());
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+        body: TabBarView(
+          controller: _tabController,
+          children: [
+            _buildParticipantsTab(),
+            EventDetailsScreen(
+              eventName: _eventName,
+              category: _category,
+              eventId: widget.eventId,
+              selectedDate: widget.eventDate,
             ),
+          ],
+        ),
+      ),
     );
+  }
+
+  Widget _buildParticipantsTab() {
+    return _isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      child: Text(
+                        '$_eventName - $_category',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Container(
+                      margin: EdgeInsets.zero,
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Spacer(),
+                          ModeIcon(
+                            icon: Icons.work,
+                            color: Colors.blue,
+                            label: 'Office',
+                          ),
+                          ModeIcon(
+                            icon: Icons.home,
+                            color: Colors.green,
+                            label: 'WFH',
+                          ),
+                          ModeIcon(
+                            icon: Icons.not_interested,
+                            color: Colors.red,
+                            label: 'Absent',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _participants.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    final participant = _participants[index];
+                    return Container(
+                      margin: const EdgeInsets.symmetric(
+                          vertical: 3, horizontal: 7),
+                      decoration: BoxDecoration(
+                        color: Color.fromARGB(255, 255, 255, 255),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: Colors.grey,
+                          width: 0.5,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: ListTile(
+                              title: Text(participant.participantName),
+                              subtitle:
+                                  Text('ID: ${participant.participantId}'),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 5),
+                            child: IconButton(
+                              icon: Icon(Icons.work,
+                                  color: participant.participationMode == 1
+                                      ? Colors.blue
+                                      : Colors.grey),
+                              onPressed: () {
+                                _updateParticipationMode(
+                                    participant.participantId,
+                                    1,
+                                    DateTime.now());
+                              },
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 5),
+                            child: IconButton(
+                              icon: Icon(Icons.home,
+                                  color: participant.participationMode == 2
+                                      ? Colors.green
+                                      : Colors.grey),
+                              onPressed: () {
+                                _updateParticipationMode(
+                                    participant.participantId,
+                                    2,
+                                    DateTime.now());
+                              },
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            child: IconButton(
+                              icon: Icon(Icons.not_interested,
+                                  color: participant.participationMode == 3
+                                      ? Colors.red
+                                      : Colors.grey),
+                              onPressed: () {
+                                _updateParticipationMode(
+                                    participant.participantId,
+                                    3,
+                                    DateTime.now());
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
   }
 }

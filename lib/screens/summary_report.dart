@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'dart:math';
 
 class ModeIcon extends StatelessWidget {
   final IconData icon;
@@ -26,45 +30,134 @@ class ModeIcon extends StatelessWidget {
 class EventDetailsScreen extends StatefulWidget {
   final String eventName;
   final String category;
-  final int officeParticipants;
-  final int wfhParticipants;
-  final int absentParticipants;
+  final int eventId;
+  final DateTime selectedDate;
 
   EventDetailsScreen({
     required this.eventName,
     required this.category,
-    required this.officeParticipants,
-    required this.wfhParticipants,
-    required this.absentParticipants,
+    required this.eventId,
+    required this.selectedDate,
   });
 
   @override
   _EventDetailsScreenState createState() => _EventDetailsScreenState();
 }
 
+@override
+_EventDetailsScreenState createState() => _EventDetailsScreenState();
+
 class _EventDetailsScreenState extends State<EventDetailsScreen> {
-  String _selectedTimeRange = 'Today';
+  late String _selectedTimeRange;
+  late DateTime _startDate;
+  late DateTime _endDate;
+  late List<String> _dates;
+  late List<double> _officeCounts;
+  late List<double> _wfhCounts;
+  late List<double> _absentCounts;
+
+  @override
+  void initState() {
+    super.initState();
+    _dates = [];
+    _officeCounts = [];
+    _wfhCounts = [];
+    _absentCounts = [];
+    _selectedTimeRange = 'Day';
+    _calculateDateRange(_selectedTimeRange);
+  }
+
+  void _calculateDateRange(String selectedTimeRange) {
+    DateTime now = DateTime.now();
+    switch (selectedTimeRange) {
+      case 'This Week':
+        _startDate = now.subtract(Duration(days: now.weekday - 1));
+        _endDate = now;
+        break;
+      case 'This Month':
+        DateTime firstDayOfMonth = DateTime(now.year, now.month, 1);
+        _startDate = firstDayOfMonth;
+        _endDate = now;
+        break;
+      case 'Custom':
+        // Implement custom date range selection logic if needed
+        break;
+      default:
+        _startDate = widget.selectedDate;
+        _endDate = widget.selectedDate;
+        break;
+    }
+    String formattedStartDate = DateFormat('yyyy-MM-dd').format(_startDate);
+    String formattedEndDate = DateFormat('yyyy-MM-dd').format(_endDate);
+
+    // Call fetchDataFromAPI() with formatted dates
+    _fetchDataFromAPI(formattedStartDate, formattedEndDate);
+  }
+
+  Future<void> _fetchDataFromAPI(String startDate, String endDate) async {
+    final response = await http.get(Uri.parse(
+        'http://10.0.2.2:3000/api/v1/analytics/?limit=2000&startDate=$startDate&endDate=$endDate&filterBy=eventId&filterValue=${widget.eventId}'));
+
+    if (response.statusCode == 200) {
+      final jsonData = json.decode(response.body);
+      print(jsonData);
+      final eventsByDate = jsonData['data']['eventsWithParticipantsByDate'];
+
+      _dates.clear();
+      _officeCounts.clear();
+      _wfhCounts.clear();
+      _absentCounts.clear();
+
+      eventsByDate.forEach((dayData) {
+        final date = dayData['date'];
+        final events = dayData['events'];
+
+        double officeCount = 0;
+        double wfhCount = 0;
+        double absentCount = 0;
+
+        events.forEach((eventDetails) {
+          final participants = eventDetails['participants'];
+
+          participants.forEach((participant) {
+            final mode = participant['participationMode'];
+            if (mode == 1) {
+              officeCount++;
+            } else if (mode == 2) {
+              wfhCount++;
+            } else if (mode == 3) {
+              absentCount++;
+            }
+          });
+        });
+
+        _dates.add(date);
+        _officeCounts.add(officeCount);
+        _wfhCounts.add(wfhCount);
+        _absentCounts.add(absentCount);
+      });
+
+      setState(() {});
+    } else {
+      print('Failed to load data: ${response.statusCode}');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final totalParticipants = widget.officeParticipants +
-        widget.wfhParticipants +
-        widget.absentParticipants;
-    final presentParticipants =
-        widget.officeParticipants + widget.wfhParticipants;
-    final presentPercentage = (presentParticipants / totalParticipants) * 100;
-    final absentPercentage =
-        (widget.absentParticipants / totalParticipants) * 100;
+    double presentCount = _wfhCounts.reduce((a, b) => a + b) +
+        _officeCounts.reduce((a, b) => a + b);
+    print(presentCount);
+    double totalParticipants =
+        presentCount + _absentCounts.reduce((a, b) => a + b);
+    print(totalParticipants);
+    double presentPercentage = (presentCount / totalParticipants) * 100;
+    print(presentPercentage);
+    double absentPercentage =
+        (_absentCounts.reduce((a, b) => a + b) / totalParticipants) * 100;
+    print(absentPercentage);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Summary Report',
-          style: TextStyle(color: Colors.white),
-        ),
-        backgroundColor: Colors.blue,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -73,8 +166,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
               padding: const EdgeInsets.all(10),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment
-                    .spaceBetween, // Aligns children to the start and end of the row
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     '${widget.eventName} - ${widget.category}',
@@ -84,153 +176,116 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  DropdownButton<String>(
-                    value: _selectedTimeRange,
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        _selectedTimeRange = newValue!;
-                      });
-                    },
-                    items: <String>[
-                      'Today',
-                      'This Week',
-                      'This Month',
-                      'Custom'
-                    ].map<DropdownMenuItem<String>>((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value),
-                      );
-                    }).toList(),
+                  Container(
+                    height: 30,
+                    padding: EdgeInsets.symmetric(
+                        horizontal: 10), // Add padding to center text
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Colors.grey,
+                        style: BorderStyle.solid,
+                        width: 1,
+                      ),
+                      borderRadius: BorderRadius.circular(15.0),
+                    ),
+                    child: DropdownButton<String>(
+                      value: _selectedTimeRange,
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _selectedTimeRange = newValue!;
+                          if (_selectedTimeRange == 'Day') {
+                            _calculateDateRange('Day');
+                          } else if (_selectedTimeRange == 'This Week') {
+                            _calculateDateRange('This Week');
+                          } else if (_selectedTimeRange == 'This Month') {
+                            _calculateDateRange('This Month');
+                          } else if (_selectedTimeRange == 'Custom') {
+                            // _calculateDateRange('Custom');
+                          }
+                        });
+                      },
+                      items: <String>[
+                        'Day',
+                        'This Week',
+                        'This Month',
+                        'Custom'
+                      ].map<DropdownMenuItem<String>>((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Align(
+                            // Align text to the center
+                            alignment: Alignment.center,
+                            child: Text(value),
+                          ),
+                        );
+                      }).toList(),
+                      style: const TextStyle(color: Colors.black),
+                      underline: Container(), // Remove underline
+                    ),
                   ),
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(11),
-              child: Table(
-                border: TableBorder.all(),
-                children: [
-                  const TableRow(
-                    children: [
-                      TableCell(
-                        verticalAlignment: TableCellVerticalAlignment.middle,
-                        child: Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(5.0),
-                            child: Text(
-                              'Present',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ),
-                      ),
-                      TableCell(
-                        verticalAlignment: TableCellVerticalAlignment.middle,
-                        child: Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(5.0),
-                            child: Text(
-                              'Not attended',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  TableRow(
-                    children: [
-                      TableCell(
-                        verticalAlignment: TableCellVerticalAlignment.middle,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Padding(
-                              padding: EdgeInsets.all(5.0),
-                              child: ModeIcon(
-                                icon: Icons.home,
-                                color: Colors.green,
-                                label: 'WFH',
-                              ),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.all(5.0),
-                              child:
-                                  Text('${widget.wfhParticipants.toString()}'),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.all(5.0),
-                              child: ModeIcon(
-                                icon: Icons.work,
-                                color: Colors.blue,
-                                label: 'Office',
-                              ),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.all(5.0),
-                              child: Text(
-                                  '${widget.officeParticipants.toString()}'),
-                            ),
-                          ],
-                        ),
-                      ),
-                      TableCell(
-                        verticalAlignment: TableCellVerticalAlignment.middle,
-                        child: Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(5.0),
-                            child:
-                                Text('${widget.absentParticipants.toString()}'),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+            SizedBox(height: 5),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildCountContainer('Present', presentCount.toInt()),
+                _buildCountContainer(
+                    'Absent', _absentCounts.reduce((a, b) => a + b).toInt()),
+                _buildCountContainer(
+                    'WFH', _wfhCounts.reduce((a, b) => a + b).toInt()),
+              ],
             ),
             Container(
-              margin: EdgeInsets.symmetric(horizontal: 15.0),
-              padding: EdgeInsets.all(8),
+              margin: EdgeInsets.all(12),
+              padding: EdgeInsets.all(10),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: Colors.grey,
-                  width: 0.5,
+                  width: 1,
                 ),
               ),
               height: 250,
+              width: 400,
               child: BarChart(
                 BarChartData(
                   alignment: BarChartAlignment.spaceAround,
-                  maxY: totalParticipants.toDouble(),
+                  maxY: _calculateMaxY(),
                   barTouchData: BarTouchData(enabled: false),
                   titlesData: FlTitlesData(
                     show: true,
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 28,
-                        getTitlesWidget: (value, _) {
-                          const TextStyle textStyle =
-                              TextStyle(color: Colors.black, fontSize: 14);
-                          switch (value.toInt()) {
-                            case 0:
-                              return Text(
-                                'WFH',
-                                style: textStyle,
-                              );
-                            case 1:
-                              return Text(
-                                'Office',
-                                style: textStyle,
-                              );
-                            default:
-                              return SizedBox();
-                          }
-                        },
-                      ),
+                          showTitles: true,
+                          reservedSize: 28,
+                          getTitlesWidget: (value, _) {
+                            switch (_selectedTimeRange) {
+                              case 'Day':
+                                int index = value.toInt();
+                                switch (index) {
+                                  case 0:
+                                    return Text('WFH');
+                                  case 1:
+                                    return Text('Office');
+                                  case 2:
+                                    return Text('Not attended');
+                                  default:
+                                    break; // Return an empty string for other values
+                                }
+                              // return SizedBox();
+                              case 'This Week':
+                                DateTime date = DateTime.parse(
+                                    _dates.reversed.toList()[value
+                                        .toInt()]); // Get the date for the index
+                                return Text(DateFormat('E').format(
+                                    date)); // Return the day name (e.g., Mon, Tue)
+                              default:
+                                break;
+                            }
+                            return SizedBox();
+                          }),
                     ),
                     leftTitles: AxisTitles(
                       sideTitles: SideTitles(
@@ -238,45 +293,32 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                         reservedSize: 40,
                       ),
                     ),
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
                   ),
                   borderData: FlBorderData(show: false),
-                  barGroups: [
-                    BarChartGroupData(
-                      x: 0,
-                      barRods: [
-                        BarChartRodData(
-                          toY: widget.wfhParticipants.toDouble(),
-                          color: Colors.green,
-                        ),
-                      ],
-                    ),
-                    BarChartGroupData(
-                      x: 1,
-                      barRods: [
-                        BarChartRodData(
-                          toY: widget.officeParticipants.toDouble(),
-                          color: Colors.blue,
-                        ),
-                      ],
-                    ),
-                  ],
+                  barGroups: _buildBarGroups(),
                 ),
               ),
             ),
-            SizedBox(height: 20),
+            // SizedBox(height: 10),
             Stack(
               children: [
                 Container(
-                  margin: EdgeInsets.symmetric(horizontal: 15, vertical: 12),
+                  margin: EdgeInsets.all(12),
                   padding: EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: Colors.grey,
-                      width: 0.5,
+                      width: 1,
                     ),
                   ),
-                  height: 250,
+                  height: 200,
                   child: PieChart(
                     PieChartData(
                       sections: [
@@ -320,6 +362,167 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
       ),
     );
   }
+
+  List<BarChartGroupData> _buildBarGroups() {
+    List<BarChartGroupData> barsGroups =
+        []; // List to hold BarChartGroupData objects
+
+    switch (_selectedTimeRange) {
+      case 'Day':
+        for (int i = 0; i < _dates.length; i++) {
+          // Create a BarChartGroupData object for each mode
+          BarChartGroupData wfhBarGroup = BarChartGroupData(
+            x: 0, // Assigning index i to each bar group
+            // barsSpace: 3,
+            barRods: [
+              BarChartRodData(
+                  toY: _wfhCounts[i] == 0 ? 0.001 : _wfhCounts[i],
+                  color: Colors.green,
+                  width: 16,
+                  borderRadius: BorderRadius.circular(2)),
+            ],
+          );
+
+          BarChartGroupData officeBarGroup = BarChartGroupData(
+            x: 1, // Assigning index i to each bar group
+            // barsSpace: 3,
+            barRods: [
+              BarChartRodData(
+                  toY: _officeCounts[i] == 0 ? 0.001 : _officeCounts[i],
+                  color: Colors.blue,
+                  width: 16,
+                  borderRadius: BorderRadius.circular(2))
+            ],
+          );
+
+          BarChartGroupData absentBarGroup = BarChartGroupData(
+            x: 2, // Assigning index i to each bar group
+            // barsSpace: 3,
+            barRods: [
+              BarChartRodData(
+                  toY: _absentCounts[i] == 0 ? 0.001 : _absentCounts[i],
+                  color: Colors.red,
+                  width: 16,
+                  borderRadius: BorderRadius.circular(2))
+            ],
+          );
+
+          barsGroups.add(wfhBarGroup); // Add the WFH bar group to the list
+          barsGroups
+              .add(officeBarGroup); // Add the Office bar group to the list
+          barsGroups
+              .add(absentBarGroup); // Add the Absent bar group to the list
+        }
+        break;
+      case 'This Week':
+        for (int i = _dates.length - 1; i >= 0; i--) {
+          double wfhCount = _wfhCounts[i];
+          double officeCount = _officeCounts[i];
+          double absentCount = _absentCounts[i];
+          double totalcount = wfhCount + officeCount + absentCount;
+
+          // Create BarChartRodStackItem for each category
+          List<BarChartRodStackItem> rodStackItems = [
+            BarChartRodStackItem(0, wfhCount, Colors.green),
+            BarChartRodStackItem(wfhCount, wfhCount + officeCount, Colors.blue),
+            BarChartRodStackItem(wfhCount + officeCount,
+                wfhCount + officeCount + absentCount, Colors.red),
+          ];
+
+          // Create BarChartRodData for the stacked bar
+          BarChartRodData barData = BarChartRodData(
+            toY: totalcount,
+            rodStackItems: rodStackItems,
+            width: 16,
+            borderRadius: BorderRadius.circular(2),
+          );
+
+          // Create BarChartGroupData for each day
+          BarChartGroupData barGroup = BarChartGroupData(
+            x: _dates.length - 1 - i,
+            barRods: [barData],
+            // showingTooltipIndicators: [0, 1, 2],
+          );
+
+          barsGroups.add(barGroup);
+        }
+        break;
+    }
+    return barsGroups;
+  }
+
+  double _calculateMaxY() {
+    switch (_selectedTimeRange) {
+      case 'Day':
+        double maxCount = _wfhCounts
+            .reduce(max); // Finding the maximum count among all categories
+        maxCount = max(
+            maxCount,
+            _officeCounts.reduce(
+                max)); // Comparing with the maximum count from the office category
+        maxCount = max(
+            maxCount,
+            _absentCounts.reduce(
+                max)); // Comparing with the maximum count from the absent category
+        return maxCount.toDouble();
+      case 'This Week':
+        double maxTotal = 0;
+        // Iterate through each day to find the maximum total
+        for (int i = 0; i < _dates.length; i++) {
+          double total = _wfhCounts[i] + _officeCounts[i] + _absentCounts[i];
+          if (total > maxTotal) {
+            maxTotal = total;
+          }
+        }
+        return maxTotal;
+      // Add cases for other time ranges if needed
+      default:
+        return 0; // Default to 0 if time range is not recognized
+    }
+  }
+}
+
+Widget _buildCountContainer(String label, int count) {
+  Color textColor;
+  if (label == 'Present') {
+    textColor = Colors.blue;
+  } else if (label == 'Absent') {
+    textColor = Colors.red;
+  } else {
+    textColor = Colors.green;
+  }
+
+  return SizedBox(
+    width: 115, // Adjust width according to your design
+    height: 80, // Adjust height according to your design
+    child: Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      padding: EdgeInsets.all(10),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+          SizedBox(height: 5),
+          Text(
+            count.toString(),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class LegendWidget extends StatelessWidget {

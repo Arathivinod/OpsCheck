@@ -5,13 +5,13 @@ class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
 
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  LoginScreenState createState() => LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  String? _employeeId;
-  String? _password;
+  late String? employeeId;
+  late String? password;
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   }
                   return null;
                 },
-                onSaved: (value) => _employeeId = value,
+                onSaved: (value) => employeeId = value,
               ),
               const SizedBox(height: 20),
               TextFormField(
@@ -70,7 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   }
                   return null;
                 },
-                onSaved: (value) => _password = value,
+                onSaved: (value) => password = value,
               ),
               const SizedBox(height: 20),
               ElevatedButton.icon(
@@ -81,7 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(
-                          builder: (context) => EventListScreen()),
+                          builder: (context) => const EventListScreen()),
                       (route) => false,
                     );
                   }
