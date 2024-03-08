@@ -43,6 +43,10 @@ dependencies:
   fl_chart: ^0.66.2
   flutter_screenutil: ^5.9.0
   date_picker_timeline: ^1.2.3
+  flutter_date_range_picker: ^0.0.12
+  flutter_charts: ^0.5.2
+ 
+  syncfusion_flutter_charts: ^24.2.9
 
 dev_dependencies:
   flutter_test:
