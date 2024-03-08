@@ -33,10 +33,9 @@ class EventByDate {
     final List<Event> events = [];
     if (json['events'] != null) {
       // Extract event data from JSON
-      final Map<String, dynamic> eventData = json['events'];
-      eventData.forEach((key, value) {
-        events.add(Event.fromJson(int.parse(key), value));
-      });
+      final List<dynamic> eventDataList = json['events'];
+      events
+          .addAll(eventDataList.map((eventData) => Event.fromJson(eventData)));
     }
     // Parse date string into DateTime object
     final DateTime date = DateTime.parse(json['date']);
@@ -62,14 +61,14 @@ class Event {
     required this.participants,
   });
 
-  factory Event.fromJson(int eventId, Map<String, dynamic> json) {
+  factory Event.fromJson(Map<String, dynamic> json) {
     // Extract participant data from JSON
     final List<dynamic> participantDataList = json['participants'];
     final List<Participant> participants = participantDataList
         .map((participantData) => Participant.fromJson(participantData))
         .toList();
     return Event(
-      eventId: eventId,
+      eventId: json['eventId'],
       eventName: json['eventName'],
       time: json['time'],
       category: json['category'],

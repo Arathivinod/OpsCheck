@@ -70,10 +70,7 @@ class EventListScreenState extends State<EventListScreen> {
       appBar: AppBar(
         title: const Text(
           'Events',
-          style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: Colors.blue,
-        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -84,28 +81,27 @@ class EventListScreenState extends State<EventListScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 GestureDetector(
-                  onTap: () {
+                  onTap: () async {
                     // Open date picker dialog here
-                    showDatePicker(
+                    final selectedDate = await showDatePicker(
                       context: context,
                       initialDate: _selectedDate,
-                      firstDate: DateTime.now().subtract(
-                          Duration(days: 3)), // 3 days before the current date
-                      lastDate: DateTime.now().add(
-                          Duration(days: 7)), // 7 days from the current date
-                    ).then((selectedDate) {
-                      if (selectedDate != null) {
-                        setState(() {
-                          _selectedDate = selectedDate;
-                        });
-                        _fetchEventsByDate(_selectedDate);
-                        _controller
-                            .animateToSelection(); // Update the timeline to reflect the selected date
-                      }
-                    });
+                      firstDate: DateTime.now().subtract(const Duration(
+                          days: 3)), // 3 days before the current date
+                      lastDate: DateTime.now().add(const Duration(
+                          days: 7)), // 7 days from the current date
+                    );
+                    if (selectedDate != null) {
+                      setState(() {
+                        _selectedDate = selectedDate;
+                      });
+                      _fetchEventsByDate(_selectedDate);
+                      _controller
+                          .animateToSelection(); // Update the timeline to reflect the selected date
+                    }
                   },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.0),
                     child: Row(
                       children: [
                         Text(
@@ -134,7 +130,7 @@ class EventListScreenState extends State<EventListScreen> {
                     height: 90,
                     width: MediaQuery.of(context).size.width,
                     child: DatePicker(
-                      DateTime.now().subtract(Duration(days: 3)),
+                      DateTime.now().subtract(const Duration(days: 3)),
                       controller: _controller,
                       initialSelectedDate: _selectedDate,
                       selectionColor: Colors.blue,
@@ -144,6 +140,8 @@ class EventListScreenState extends State<EventListScreen> {
                           _selectedDate = date;
                         });
                         await _fetchEventsByDate(_selectedDate);
+                        _controller
+                            .animateToSelection(); // Update the timeline to reflect the selected date
                       },
                     ),
                   ),
@@ -156,56 +154,97 @@ class EventListScreenState extends State<EventListScreen> {
               valueListenable: _isLoadingNotifier,
               builder: (context, isLoading, child) {
                 if (isLoading) {
-                  return Center(
+                  return const Center(
                     child: CircularProgressIndicator(),
                   );
                 } else {
                   return ListView(
                     children: _eventsByDate.isEmpty
                         ? [
-                            Center(
+                            const Center(
                               child: Text('No events for selected date'),
                             ),
                           ]
                         : _eventsByDate
                             .expand(
                               (eventByDate) => eventByDate.events.map(
-                                (event) => Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 5, horizontal: 10),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: const Color.fromARGB(
-                                        255,
-                                        243,
-                                        249,
-                                        255,
+                                (event) => GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            ParticipantListScreen(
+                                          eventId: event.eventId,
+                                          eventDate: _selectedDate,
+                                        ),
                                       ),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: Colors.blue,
-                                        width: 0.5,
+                                    );
+                                  },
+                                  child: Padding(
+                                    padding: EdgeInsets.all(0),
+                                    child: Container(
+                                      margin: const EdgeInsets.symmetric(
+                                          vertical: 3, horizontal: 7),
+                                      height:
+                                          80, // Increase the height of the container
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: Colors.grey,
+                                          width: 0.5,
+                                        ),
                                       ),
-                                    ),
-                                    child: ListTile(
-                                      title: Text(
-                                        '${event.eventName} - ${event.category}',
-                                      ),
-                                      subtitle: Text(
-                                        'Time: ${_formatTime(event.time)}',
-                                      ),
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                ParticipantListScreen(
-                                              eventId: event.eventId,
-                                              eventDate: _selectedDate,
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            flex: 1,
+                                            child: Container(
+                                              color: Colors
+                                                  .blue, // Blue background color
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                vertical: 7,
+                                                horizontal: 4,
+                                              ),
+                                              child: Text(
+                                                textAlign: TextAlign.center,
+                                                '${_formatTime(event.time)}',
+                                                style: TextStyle(
+                                                  color: Colors
+                                                      .white, // White text color
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
                                             ),
                                           ),
-                                        );
-                                      },
+                                          Expanded(
+                                            flex: 4,
+                                            child: Container(
+                                              color: Colors
+                                                  .white, // White background color
+                                              padding: EdgeInsets.all(15),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Text(
+                                                    '${event.eventName} - ${event.category}', // Event name in blue color
+                                                    style: TextStyle(
+                                                      color: Colors
+                                                          .blue, // Blue text color
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  )
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
