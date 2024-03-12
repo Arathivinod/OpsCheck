@@ -182,7 +182,7 @@ class EventListScreenState extends State<EventListScreen> {
                                     );
                                   },
                                   child: Padding(
-                                    padding: EdgeInsets.all(0),
+                                    padding: const EdgeInsets.all(0),
                                     child: Container(
                                       margin: const EdgeInsets.symmetric(
                                           vertical: 3, horizontal: 7),
@@ -210,7 +210,7 @@ class EventListScreenState extends State<EventListScreen> {
                                               child: Text(
                                                 textAlign: TextAlign.center,
                                                 '${_formatTime(event.time)}',
-                                                style: TextStyle(
+                                                style: const TextStyle(
                                                   color: Colors
                                                       .white, // White text color
                                                   fontWeight: FontWeight.bold,
@@ -223,7 +223,7 @@ class EventListScreenState extends State<EventListScreen> {
                                             child: Container(
                                               color: Colors
                                                   .white, // White background color
-                                              padding: EdgeInsets.all(15),
+                                              padding: const EdgeInsets.all(15),
                                               child: Column(
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.start,
@@ -232,7 +232,7 @@ class EventListScreenState extends State<EventListScreen> {
                                                 children: [
                                                   Text(
                                                     '${event.eventName} - ${event.category}', // Event name in blue color
-                                                    style: TextStyle(
+                                                    style: const TextStyle(
                                                       color: Colors
                                                           .blue, // Blue text color
                                                       fontWeight:

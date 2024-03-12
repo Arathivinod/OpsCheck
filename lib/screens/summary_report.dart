@@ -71,13 +71,15 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     DateTime now = DateTime.now();
     switch (selectedTimeRange) {
       case 'This Week':
-        _startDate = now.subtract(Duration(days: now.weekday - 1));
-        _endDate = now;
+        _startDate = widget.selectedDate
+            .subtract(Duration(days: widget.selectedDate.weekday - 1));
+        _endDate = widget.selectedDate;
         break;
       case 'This Month':
-        DateTime firstDayOfMonth = DateTime(now.year, now.month, 1);
+        DateTime firstDayOfMonth =
+            DateTime(widget.selectedDate.year, widget.selectedDate.month, 1);
         _startDate = firstDayOfMonth;
-        _endDate = now;
+        _endDate = widget.selectedDate;
         break;
       case 'Custom':
         // Implement custom date range selection logic if needed
@@ -145,17 +147,42 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    double presentCount = _wfhCounts.reduce((a, b) => a + b) +
-        _officeCounts.reduce((a, b) => a + b);
-    print(presentCount);
-    double totalParticipants =
-        presentCount + _absentCounts.reduce((a, b) => a + b);
-    print(totalParticipants);
-    double presentPercentage = (presentCount / totalParticipants) * 100;
-    print(presentPercentage);
-    double absentPercentage =
-        (_absentCounts.reduce((a, b) => a + b) / totalParticipants) * 100;
-    print(absentPercentage);
+    // Initialize variables
+    double presentCount = 0;
+    double totalParticipants = 0;
+    double presentPercentage = 0;
+    double absentPercentage = 0;
+
+    // Check if _wfhCounts and _officeCounts are not null and not empty before calculating presentCount
+    if (_wfhCounts?.isNotEmpty == true && _officeCounts?.isNotEmpty == true) {
+      // Calculate presentCount by summing elements in _wfhCounts and _officeCounts
+      presentCount = _wfhCounts.reduce((a, b) => (a ?? 0) + (b ?? 0)) +
+          _officeCounts.reduce((a, b) => (a ?? 0) + (b ?? 0));
+    }
+
+    // Check if _absentCounts is not null and not empty before calculating totalParticipants and percentages
+    if (_absentCounts?.isNotEmpty == true) {
+      // Calculate totalParticipants by adding presentCount and sum of elements in _absentCounts
+      totalParticipants =
+          presentCount + _absentCounts.reduce((a, b) => (a ?? 0) + (b ?? 0));
+
+      // Calculate presentPercentage
+      if (totalParticipants != 0) {
+        presentPercentage = (presentCount / totalParticipants) * 100;
+
+        // Calculate absentPercentage
+        double totalAbsentCount = _absentCounts
+            .where((count) => count != null)
+            .fold(0, (prev, count) => (prev ?? 0) + (count ?? 0));
+        absentPercentage = (totalAbsentCount / totalParticipants) * 100;
+      }
+    }
+
+    // Print results
+    print('Present Count: $presentCount');
+    print('Total Participants: $totalParticipants');
+    print('Present Percentage: $presentPercentage');
+    print('Absent Percentage: $absentPercentage');
 
     return Scaffold(
       body: SingleChildScrollView(
@@ -178,7 +205,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   ),
                   Container(
                     height: 30,
-                    padding: EdgeInsets.symmetric(
+                    padding: const EdgeInsets.symmetric(
                         horizontal: 10), // Add padding to center text
                     decoration: BoxDecoration(
                       border: Border.all(
@@ -232,14 +259,24 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
               children: [
                 _buildCountContainer('Present', presentCount.toInt()),
                 _buildCountContainer(
-                    'Absent', _absentCounts.reduce((a, b) => a + b).toInt()),
+                  'Absent',
+                  _absentCounts.isNotEmpty
+                      ? _absentCounts
+                          .reduce((a, b) => (a ?? 0) + (b ?? 0))
+                          .toInt()
+                      : 0,
+                ),
                 _buildCountContainer(
-                    'WFH', _wfhCounts.reduce((a, b) => a + b).toInt()),
+                  'WFH',
+                  _wfhCounts.isNotEmpty
+                      ? _wfhCounts.reduce((a, b) => (a ?? 0) + (b ?? 0)).toInt()
+                      : 0,
+                ),
               ],
             ),
             Container(
-              margin: EdgeInsets.all(12),
-              padding: EdgeInsets.all(10),
+              margin: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
@@ -284,10 +321,10 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                               default:
                                 break;
                             }
-                            return SizedBox();
+                            return const SizedBox();
                           }),
                     ),
-                    leftTitles: AxisTitles(
+                    leftTitles: const AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
                         reservedSize: 40,
@@ -309,8 +346,8 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
             Stack(
               children: [
                 Container(
-                  margin: EdgeInsets.all(12),
-                  padding: EdgeInsets.all(10),
+                  margin: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
@@ -326,7 +363,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           color: Colors.blue,
                           value: presentPercentage,
                           title: presentPercentage.toStringAsFixed(2) + '%',
-                          titleStyle: TextStyle(
+                          titleStyle: const TextStyle(
                             color: Colors.black,
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -336,7 +373,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           color: Colors.red,
                           value: absentPercentage,
                           title: absentPercentage.toStringAsFixed(2) + '%',
-                          titleStyle: TextStyle(
+                          titleStyle: const TextStyle(
                             color: Colors.black,
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -346,7 +383,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                       sectionsSpace: 0,
                       centerSpaceRadius: 40,
                     ),
-                    swapAnimationDuration: Duration(milliseconds: 150),
+                    swapAnimationDuration: const Duration(milliseconds: 150),
                     swapAnimationCurve: Curves.linear,
                   ),
                 ),
@@ -416,9 +453,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         break;
       case 'This Week':
         for (int i = _dates.length - 1; i >= 0; i--) {
-          double wfhCount = _wfhCounts[i];
-          double officeCount = _officeCounts[i];
-          double absentCount = _absentCounts[i];
+          double wfhCount = _wfhCounts[i] ?? 0;
+          double officeCount = _officeCounts[i] ?? 0;
+          double absentCount = _absentCounts[i] ?? 0;
           double totalcount = wfhCount + officeCount + absentCount;
 
           // Create BarChartRodStackItem for each category
@@ -454,22 +491,26 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   double _calculateMaxY() {
     switch (_selectedTimeRange) {
       case 'Day':
-        double maxCount = _wfhCounts
-            .reduce(max); // Finding the maximum count among all categories
-        maxCount = max(
-            maxCount,
-            _officeCounts.reduce(
-                max)); // Comparing with the maximum count from the office category
-        maxCount = max(
-            maxCount,
-            _absentCounts.reduce(
-                max)); // Comparing with the maximum count from the absent category
+        double maxCount = _wfhCounts.isNotEmpty
+            ? _wfhCounts.reduce((a, b) => max(a ?? 0, b ?? 0))
+            : 0; // Finding the maximum count among all categories
+        maxCount = maxCount;
+        if (_officeCounts.isNotEmpty) {
+          maxCount = max(
+              maxCount, _officeCounts.reduce((a, b) => max(a ?? 0, b ?? 0)));
+        } // Comparing with the maximum count from the office category
+        if (_absentCounts.isNotEmpty) {
+          maxCount = max(
+              maxCount, _absentCounts.reduce((a, b) => max(a ?? 0, b ?? 0)));
+        } // Comparing with the maximum count from the absent category
         return maxCount.toDouble();
       case 'This Week':
         double maxTotal = 0;
         // Iterate through each day to find the maximum total
         for (int i = 0; i < _dates.length; i++) {
-          double total = _wfhCounts[i] + _officeCounts[i] + _absentCounts[i];
+          double total = (_wfhCounts[i] ?? 0) +
+              (_officeCounts[i] ?? 0) +
+              (_absentCounts[i] ?? 0);
           if (total > maxTotal) {
             maxTotal = total;
           }
@@ -480,55 +521,55 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         return 0; // Default to 0 if time range is not recognized
     }
   }
-}
 
-Widget _buildCountContainer(String label, int count) {
-  Color textColor;
-  if (label == 'Present') {
-    textColor = Colors.blue;
-  } else if (label == 'Absent') {
-    textColor = Colors.red;
-  } else {
-    textColor = Colors.green;
+  Widget _buildCountContainer(String label, int count) {
+    Color textColor;
+    if (label == 'Present') {
+      textColor = Colors.blue;
+    } else if (label == 'Absent') {
+      textColor = Colors.red;
+    } else {
+      textColor = Colors.green;
+    }
+
+    return SizedBox(
+      width: 115, // Adjust width according to your design
+      height: 80, // Adjust height according to your design
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
+            ),
+            SizedBox(height: 5),
+            Text(
+              count.toString(),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
-
-  return SizedBox(
-    width: 115, // Adjust width according to your design
-    height: 80, // Adjust height according to your design
-    child: Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      padding: EdgeInsets.all(10),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: textColor,
-            ),
-          ),
-          SizedBox(height: 5),
-          Text(
-            count.toString(),
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
 }
 
 class LegendWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         LegendItem(color: Colors.blue, label: 'Present'),
