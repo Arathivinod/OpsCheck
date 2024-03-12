@@ -68,7 +68,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   }
 
   void _calculateDateRange(String selectedTimeRange) {
-    DateTime now = DateTime.now();
+    // DateTime now = DateTime.now();
     switch (selectedTimeRange) {
       case 'This Week':
         _startDate = widget.selectedDate
@@ -154,17 +154,17 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     double absentPercentage = 0;
 
     // Check if _wfhCounts and _officeCounts are not null and not empty before calculating presentCount
-    if (_wfhCounts?.isNotEmpty == true && _officeCounts?.isNotEmpty == true) {
+    if (_wfhCounts.isNotEmpty == true && _officeCounts.isNotEmpty == true) {
       // Calculate presentCount by summing elements in _wfhCounts and _officeCounts
-      presentCount = _wfhCounts.reduce((a, b) => (a ?? 0) + (b ?? 0)) +
-          _officeCounts.reduce((a, b) => (a ?? 0) + (b ?? 0));
+      presentCount = _wfhCounts.reduce((a, b) => (a) + (b)) +
+          _officeCounts.reduce((a, b) => (a) + (b));
     }
 
     // Check if _absentCounts is not null and not empty before calculating totalParticipants and percentages
-    if (_absentCounts?.isNotEmpty == true) {
+    if (_absentCounts.isNotEmpty == true) {
       // Calculate totalParticipants by adding presentCount and sum of elements in _absentCounts
       totalParticipants =
-          presentCount + _absentCounts.reduce((a, b) => (a ?? 0) + (b ?? 0));
+          presentCount + _absentCounts.reduce((a, b) => (a) + (b));
 
       // Calculate presentPercentage
       if (totalParticipants != 0) {
@@ -173,7 +173,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         // Calculate absentPercentage
         double totalAbsentCount = _absentCounts
             .where((count) => count != null)
-            .fold(0, (prev, count) => (prev ?? 0) + (count ?? 0));
+            .fold(0, (prev, count) => (prev) + (count));
         absentPercentage = (totalAbsentCount / totalParticipants) * 100;
       }
     }
@@ -253,7 +253,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                 ],
               ),
             ),
-            SizedBox(height: 5),
+            const SizedBox(height: 5),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -261,15 +261,13 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                 _buildCountContainer(
                   'Absent',
                   _absentCounts.isNotEmpty
-                      ? _absentCounts
-                          .reduce((a, b) => (a ?? 0) + (b ?? 0))
-                          .toInt()
+                      ? _absentCounts.reduce((a, b) => (a) + (b)).toInt()
                       : 0,
                 ),
                 _buildCountContainer(
                   'WFH',
                   _wfhCounts.isNotEmpty
-                      ? _wfhCounts.reduce((a, b) => (a ?? 0) + (b ?? 0)).toInt()
+                      ? _wfhCounts.reduce((a, b) => (a) + (b)).toInt()
                       : 0,
                 ),
               ],
@@ -303,11 +301,11 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                                 int index = value.toInt();
                                 switch (index) {
                                   case 0:
-                                    return Text('WFH');
+                                    return const Text('WFH');
                                   case 1:
-                                    return Text('Office');
+                                    return const Text('Office');
                                   case 2:
-                                    return Text('Not attended');
+                                    return const Text('Not attended');
                                   default:
                                     break; // Return an empty string for other values
                                 }
@@ -453,9 +451,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         break;
       case 'This Week':
         for (int i = _dates.length - 1; i >= 0; i--) {
-          double wfhCount = _wfhCounts[i] ?? 0;
-          double officeCount = _officeCounts[i] ?? 0;
-          double absentCount = _absentCounts[i] ?? 0;
+          double wfhCount = _wfhCounts[i];
+          double officeCount = _officeCounts[i];
+          double absentCount = _absentCounts[i];
           double totalcount = wfhCount + officeCount + absentCount;
 
           // Create BarChartRodStackItem for each category
@@ -496,21 +494,18 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
             : 0; // Finding the maximum count among all categories
         maxCount = maxCount;
         if (_officeCounts.isNotEmpty) {
-          maxCount = max(
-              maxCount, _officeCounts.reduce((a, b) => max(a ?? 0, b ?? 0)));
+          maxCount = max(maxCount, _officeCounts.reduce((a, b) => max(a, b)));
         } // Comparing with the maximum count from the office category
         if (_absentCounts.isNotEmpty) {
-          maxCount = max(
-              maxCount, _absentCounts.reduce((a, b) => max(a ?? 0, b ?? 0)));
+          maxCount = max(maxCount, _absentCounts.reduce((a, b) => max(a, b)));
         } // Comparing with the maximum count from the absent category
         return maxCount.toDouble();
       case 'This Week':
         double maxTotal = 0;
         // Iterate through each day to find the maximum total
         for (int i = 0; i < _dates.length; i++) {
-          double total = (_wfhCounts[i] ?? 0) +
-              (_officeCounts[i] ?? 0) +
-              (_absentCounts[i] ?? 0);
+          double total =
+              (_wfhCounts[i]) + (_officeCounts[i]) + (_absentCounts[i]);
           if (total > maxTotal) {
             maxTotal = total;
           }
@@ -551,10 +546,10 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                 color: textColor,
               ),
             ),
-            SizedBox(height: 5),
+            const SizedBox(height: 5),
             Text(
               count.toString(),
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
@@ -600,7 +595,7 @@ class LegendItem extends StatelessWidget {
           height: 15,
           color: color,
         ),
-        SizedBox(width: 5),
+        const SizedBox(width: 5),
         Text(label),
       ],
     );
