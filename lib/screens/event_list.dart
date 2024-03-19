@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:opscheck/modal/modal.dart';
 import 'participant_list.dart';
 import 'package:date_picker_timeline/date_picker_timeline.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class EventListScreen extends StatefulWidget {
   const EventListScreen({Key? key}) : super(key: key);
@@ -68,9 +69,7 @@ class EventListScreenState extends State<EventListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Events',
-        ),
+        title: Text(AppLocalizations.of(context)!.events),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
