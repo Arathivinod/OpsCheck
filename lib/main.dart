@@ -19,8 +19,8 @@ class MyApp extends StatelessWidget {
         Locale('en'), // English
         Locale('hi'), //Hindi
       ],
-      locale: const Locale("hi"),
-      title: AppLocalizations.of(context)?.title ?? 'Default Title',
+      locale: const Locale("en"),
+      title: AppLocalizations.of(context)?.title ?? 'Opscheck',
       home: const LoginScreen(),
       theme: ThemeData(
         appBarTheme: const AppBarTheme(

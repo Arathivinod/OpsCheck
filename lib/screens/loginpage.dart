@@ -37,8 +37,8 @@ class LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 80),
               TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Employee ID',
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.empid,
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
@@ -58,8 +58,8 @@ class LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 20),
               TextFormField(
                 obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.password,
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
@@ -88,7 +88,7 @@ class LoginScreenState extends State<LoginScreen> {
                   }
                 },
                 icon: const Icon(Icons.login),
-                label: const Text('Login'),
+                label: Text(AppLocalizations.of(context)!.login),
                 style: ButtonStyle(
                   shape: MaterialStateProperty.all<RoundedRectangleBorder>(
                     RoundedRectangleBorder(
