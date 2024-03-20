@@ -2,6 +2,9 @@
     "title": "Opscheck",
     "helloWorld": "Hello World!",
     "events": "Events",
-    "selectdate": "Select date"
+    "selectdate": "Select date",
+    "empid": "Employee ID",
+    "password": "Password",
+    "login": "Login"
 
 }
