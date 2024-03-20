@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:opscheck/screens/loginpage.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+// import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 void main() {
@@ -15,9 +15,12 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      locale: Locale("en"),
-      title: 'OpsCheck',
+      supportedLocales: const [
+        Locale('en'), // English
+        Locale('hi'), //Hindi
+      ],
+      locale: const Locale("hi"),
+      title: AppLocalizations.of(context)?.title ?? 'Default Title',
       home: const LoginScreen(),
       theme: ThemeData(
         appBarTheme: const AppBarTheme(

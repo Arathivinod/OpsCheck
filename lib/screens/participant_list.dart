@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
-import 'package:opscheck/modal/modal.dart';
+import 'package:opscheck/models/model_participant.dart';
 import 'summary_report.dart';
 
 class ModeIcon extends StatelessWidget {

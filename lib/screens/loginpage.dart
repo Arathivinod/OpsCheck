@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'event_list.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -24,10 +25,10 @@ class LoginScreenState extends State<LoginScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Center(
+              Center(
                 child: Text(
-                  'OpsCheck',
-                  style: TextStyle(
+                  AppLocalizations.of(context)!.title,
+                  style: const TextStyle(
                     color: Colors.blueAccent,
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
