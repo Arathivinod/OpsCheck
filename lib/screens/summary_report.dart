@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:math';
-
 class ModeIcon extends StatelessWidget {
   final IconData icon;
   final Color color;
