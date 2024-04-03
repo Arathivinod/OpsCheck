@@ -1,6 +1,8 @@
 # opscheck
 
-A new Flutter project.
+opscheck  created in Flutter and Dart
+
+This is an operations tracker application. This app is made for Ops person to do their daily work easily. This app will give the Data of Events, Compliance, Training, Awards etc 
 
 ## Getting Started
 

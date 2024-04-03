@@ -1,66 +1,257 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:opscheck/models/model_participant.dart';
+import 'package:opscheck/services/Participant_service.dart';
+import 'summary_report.dart';
 
-class ParticipantListScreen extends StatefulWidget {
+class ModeIcon extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String label;
+
+  const ModeIcon({
+    required this.icon,
+    required this.color,
+    required this.label,
+  });
+
   @override
-  _ParticipantListScreenState createState() => _ParticipantListScreenState();
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      child: Column(
+        children: [
+          Icon(icon, color: color),
+          Text(label, style: TextStyle(color: color)),
+        ],
+      ),
+    );
+  }
 }
 
-class _ParticipantListScreenState extends State<ParticipantListScreen> {
-  List<dynamic> participants = [];
+class ParticipantListScreen extends StatefulWidget {
+  final int eventId;
+  final DateTime eventDate;
+
+  const ParticipantListScreen({required this.eventId, required this.eventDate});
+
+  @override
+  ParticipantListScreenState createState() => ParticipantListScreenState();
+}
+
+class ParticipantListScreenState extends State<ParticipantListScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  List<Participant> _participants = [];
+  final bool _isLoading = false;
+  String _eventName = '';
+  String _category = '';
 
   @override
   void initState() {
     super.initState();
-    fetchParticipants();
+    _tabController = TabController(length: 2, vsync: this);
+    _fetchParticipants();
   }
 
-  Future<void> fetchParticipants() async {
-    final response =
-        await http.get(Uri.parse('http://10.0.2.2:3000/api/v1/participants'));
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
-    if (response.statusCode == 200) {
-      final jsonData = json.decode(response.body);
+  Future<void> _fetchParticipants() async {
+    try {
+      // Provide the event ID and date for which you want to fetch participants
+      int eventId = widget.eventId; // Your event ID here
+      DateTime eventDate =
+          DateTime.now(); // Date for which you want to fetch participants
+
+      // Call the fetchParticipants method from ParticipantService
+      Map<String, dynamic> participantData =
+          await ParticipantService.fetchParticipants(eventId, eventDate);
+
+      // Update state with fetched data
       setState(() {
-        participants = jsonData['data']['participants'];
+        _eventName = participantData['eventName'];
+        _category = participantData['category'];
+        _participants = participantData['participants'];
       });
-    } else {
-      throw Exception('Failed to load participants');
+    } catch (error) {
+      // Handle any errors that occurred during the fetch operation
+      print('Error fetching participants: $error');
+    }
+  }
+
+  Future<void> _updateParticipationMode(
+      int participantId, int mode, DateTime date) async {
+    try {
+      int eventId = widget.eventId; // Your event ID here
+
+      // Call the updateParticipationMode method from ParticipantService
+      await ParticipantService.updateParticipationMode(
+          eventId, participantId, mode, date);
+    } catch (error) {
+      // Handle any errors that occurred during the update operation
+      print('Error updating participation mode: $error');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Participant List',
-          style: TextStyle(color: Colors.white),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Attendance'),
+          bottom: TabBar(
+            controller: _tabController,
+            tabs: [
+              Tab(text: 'Participants'),
+              Tab(text: 'Report'),
+            ],
+          ),
         ),
-        backgroundColor: Colors.blue, // App bar color
-      ),
-      body: participants.isEmpty
-          ? Center(child: CircularProgressIndicator()) // Show progress indicator if data is loading
-          : ListView.builder(
-              itemCount: participants.length,
-              itemBuilder: (BuildContext context, int index) {
-                return Card(
-                  margin: EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-                  color: Color.fromARGB(255, 203, 227, 247), // Card color
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: ListTile(
-                    title: Text(
-                      participants[index]['participantName'],
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text('ID: ${participants[index]['participantId']}'),
-                  ),
-                );
-              },
+        body: TabBarView(
+          controller: _tabController,
+          children: [
+            _buildParticipantsTab(),
+            EventDetailsScreen(
+              eventName: _eventName,
+              category: _category,
+              eventId: widget.eventId,
+              selectedDate: widget.eventDate,
             ),
+          ],
+        ),
+      ),
     );
+  }
+
+  Widget _buildParticipantsTab() {
+    return _isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      child: Text(
+                        '$_eventName - $_category',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Container(
+                      margin: EdgeInsets.zero,
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Spacer(),
+                          ModeIcon(
+                            icon: Icons.work,
+                            color: Colors.blue,
+                            label: 'Office',
+                          ),
+                          ModeIcon(
+                            icon: Icons.home,
+                            color: Colors.green,
+                            label: 'WFH',
+                          ),
+                          ModeIcon(
+                            icon: Icons.not_interested,
+                            color: Colors.red,
+                            label: 'Absent',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _participants.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    final participant = _participants[index];
+                    return Container(
+                      margin: const EdgeInsets.symmetric(
+                          vertical: 3, horizontal: 7),
+                      decoration: BoxDecoration(
+                        color: Color.fromARGB(255, 255, 255, 255),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: Colors.grey,
+                          width: 0.5,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: ListTile(
+                              title: Text(participant.participantName),
+                              subtitle:
+                                  Text('ID: ${participant.participantId}'),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 5),
+                            child: IconButton(
+                              icon: Icon(Icons.work,
+                                  color: participant.participationMode == 1
+                                      ? Colors.blue
+                                      : Colors.grey),
+                              onPressed: () {
+                                _updateParticipationMode(
+                                    participant.participantId,
+                                    1,
+                                    DateTime.now());
+                              },
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 5),
+                            child: IconButton(
+                              icon: Icon(Icons.home,
+                                  color: participant.participationMode == 2
+                                      ? Colors.green
+                                      : Colors.grey),
+                              onPressed: () {
+                                _updateParticipationMode(
+                                    participant.participantId,
+                                    2,
+                                    DateTime.now());
+                              },
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            child: IconButton(
+                              icon: Icon(Icons.not_interested,
+                                  color: participant.participationMode == 3
+                                      ? Colors.red
+                                      : Colors.grey),
+                              onPressed: () {
+                                _updateParticipationMode(
+                                    participant.participantId,
+                                    3,
+                                    DateTime.now());
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
   }
 }

@@ -1,21 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'event_list.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  final Function(Locale) changeLocale;
+
+  const LoginScreen({Key? key, required this.changeLocale}) : super(key: key);
 
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  LoginScreenState createState() => LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  String? _employeeId;
-  String? _password;
+  late String? employeeId;
+  late String? password;
+  String _selectedLanguage = 'en'; // Default language code is 'en'
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        actions: [
+          _buildLanguageDropdownButton(context),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Form(
@@ -24,10 +33,10 @@ class _LoginScreenState extends State<LoginScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Center(
+              Center(
                 child: Text(
-                  'OpsCheck',
-                  style: TextStyle(
+                  AppLocalizations.of(context)!.title,
+                  style: const TextStyle(
                     color: Colors.blueAccent,
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
@@ -36,9 +45,9 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 80),
               TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Employee ID',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.empid,
+                  border: const OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -52,13 +61,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   }
                   return null;
                 },
-                onSaved: (value) => _employeeId = value,
+                onSaved: (value) => employeeId = value,
               ),
               const SizedBox(height: 20),
               TextFormField(
                 obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.password,
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
@@ -70,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   }
                   return null;
                 },
-                onSaved: (value) => _password = value,
+                onSaved: (value) => password = value,
               ),
               const SizedBox(height: 20),
               ElevatedButton.icon(
@@ -78,15 +87,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   if (_formKey.currentState!.validate()) {
                     _formKey.currentState!.save();
 
-                    Navigator.push(
+                    Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(
-                          builder: (context) => EventListScreen()),
+                          builder: (context) => const EventListScreen()),
+                      (route) => false,
                     );
                   }
                 },
                 icon: const Icon(Icons.login),
-                label: const Text('Login'),
+                label: Text(AppLocalizations.of(context)!.login),
                 style: ButtonStyle(
                   shape: MaterialStateProperty.all<RoundedRectangleBorder>(
                     RoundedRectangleBorder(
@@ -100,6 +110,32 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildLanguageDropdownButton(BuildContext context) {
+    return DropdownButton<String>(
+      value: _selectedLanguage,
+      onChanged: (languageCode) {
+        if (languageCode != null) {
+          setState(() {
+            _selectedLanguage = languageCode;
+          });
+          widget.changeLocale(Locale(languageCode));
+        }
+      },
+      items: AppLocalizations.supportedLocales
+          .map(
+            (locale) => DropdownMenuItem<String>(
+              value: locale.languageCode,
+              child: Text(
+                locale.languageCode.toUpperCase(),
+                style:
+                    TextStyle(color: Colors.black), // Set font color to black
+              ),
+            ),
+          )
+          .toList(),
     );
   }
 }
