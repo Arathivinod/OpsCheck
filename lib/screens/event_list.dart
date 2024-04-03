@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:intl/intl.dart';
-import 'package:opscheck/models/model_eventresponse.dart';
 import 'package:opscheck/models/model_eventbyDate.dart';
+import 'package:opscheck/services/event_service.dart';
 import 'participant_list.dart';
 import 'package:date_picker_timeline/date_picker_timeline.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
@@ -35,27 +33,19 @@ class EventListScreenState extends State<EventListScreen> {
     _isLoadingNotifier.value = true;
 
     try {
-      final response = await http.get(
-        Uri.parse('http://10.0.2.2:3000/api/v1/analytics?limit=5000'),
-      );
+      // Fetch events for the current date
+      List<EventByDate> events =
+          await EventService.fetchEventsByDate(DateTime.now());
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
-        final eventResponse = EventResponse.fromJson(responseData);
-
-        setState(() {
-          _eventsByDate = eventResponse.eventsWithParticipantsByDate
-              .where((eventByDate) =>
-                  _isSameDay(dateOnly(eventByDate.date), dateOnly(date)))
-              .toList();
-        });
-      } else {
-        throw Exception(
-            'Failed to fetch events. Status Code: ${response.statusCode}');
-      }
-    } catch (error) {
-      // print('Error fetching events: $error');
-    } finally {
+      // Update the state with the fetched events
+      setState(() {
+        _eventsByDate = events;
+        _isLoadingNotifier.value = false;
+      });
+    } catch (e) {
+      // Handle any errors that occurred during the fetch operation
+      print('Error fetching events: $e');
+      // Optionally, you can also set _isLoadingNotifier to false here if you want to handle errors
       _isLoadingNotifier.value = false;
     }
   }
@@ -100,19 +90,19 @@ class EventListScreenState extends State<EventListScreen> {
                           .animateToSelection(); // Update the timeline to reflect the selected date
                     }
                   },
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: Row(
                       children: [
                         Text(
-                          'Select Date ',
-                          style: TextStyle(
+                          AppLocalizations.of(context)!.selectdate,
+                          style: const TextStyle(
                             color: Colors.blue,
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                           ),
                         ),
-                        Icon(Icons.calendar_today, color: Colors.blue),
+                        const Icon(Icons.calendar_today, color: Colors.blue),
                       ],
                     ),
                   ),

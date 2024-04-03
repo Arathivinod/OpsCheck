@@ -1,53 +1,57 @@
 import 'package:flutter/material.dart';
-import 'package:opscheck/screens/loginpage.dart';
-// import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:opscheck/screens/loginpage.dart';
 
 void main() {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({Key? key}) : super(key: key);
+
+  @override
+  _MyAppState createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  Locale _currentLocale = const Locale('en'); // Default locale
+
+  void _changeLocale(Locale newLocale) {
+    setState(() {
+      _currentLocale = newLocale;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: const [
-        Locale('en'), // English
-        Locale('hi'), //Hindi
-      ],
-      locale: const Locale("en"),
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: _currentLocale, // Use current locale
       title: AppLocalizations.of(context)?.title ?? 'Opscheck',
-      home: const LoginScreen(),
+      home: LoginScreen(changeLocale: _changeLocale),
       theme: ThemeData(
         appBarTheme: const AppBarTheme(
           titleTextStyle: TextStyle(
             color: Colors.white,
             fontSize: 24,
           ),
-          // Text style for the app bar title
-          backgroundColor: Colors.blue, // Background color of the app bar
-          iconTheme:
-              IconThemeData(color: Colors.white), // Icon color of the app bar
+          backgroundColor: Colors.blue,
+          iconTheme: IconThemeData(color: Colors.white),
         ),
         textTheme: const TextTheme(
           bodyLarge: TextStyle(
             fontSize: 16.0,
             fontWeight: FontWeight.bold,
-            color: Colors.black, // Example color
+            color: Colors.black,
           ),
           titleMedium: TextStyle(
             fontSize: 10.0,
             fontWeight: FontWeight.normal,
-            color: Colors.grey, // Example color
+            color: Colors.grey,
           ),
-
-          // You can define other text styles as well such as headline1, headline2, subtitle1, etc.
         ),
-        // Define other theme properties for your app here
       ),
     );
   }

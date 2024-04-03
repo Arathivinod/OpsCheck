@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'event_list.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'event_list.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  final Function(Locale) changeLocale;
+
+  const LoginScreen({Key? key, required this.changeLocale}) : super(key: key);
 
   @override
   LoginScreenState createState() => LoginScreenState();
@@ -13,10 +15,16 @@ class LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   late String? employeeId;
   late String? password;
+  String _selectedLanguage = 'en'; // Default language code is 'en'
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        actions: [
+          _buildLanguageDropdownButton(context),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Form(
@@ -39,7 +47,7 @@ class LoginScreenState extends State<LoginScreen> {
               TextFormField(
                 decoration: InputDecoration(
                   labelText: AppLocalizations.of(context)!.empid,
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -102,6 +110,32 @@ class LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildLanguageDropdownButton(BuildContext context) {
+    return DropdownButton<String>(
+      value: _selectedLanguage,
+      onChanged: (languageCode) {
+        if (languageCode != null) {
+          setState(() {
+            _selectedLanguage = languageCode;
+          });
+          widget.changeLocale(Locale(languageCode));
+        }
+      },
+      items: AppLocalizations.supportedLocales
+          .map(
+            (locale) => DropdownMenuItem<String>(
+              value: locale.languageCode,
+              child: Text(
+                locale.languageCode.toUpperCase(),
+                style:
+                    TextStyle(color: Colors.black), // Set font color to black
+              ),
+            ),
+          )
+          .toList(),
     );
   }
 }

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:intl/intl.dart';
 import 'package:opscheck/models/model_participant.dart';
+import 'package:opscheck/services/Participant_service.dart';
 import 'summary_report.dart';
 
 class ModeIcon extends StatelessWidget {
@@ -44,8 +42,7 @@ class ParticipantListScreenState extends State<ParticipantListScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   List<Participant> _participants = [];
-  List<Participant> _originalParticipants = [];
-  bool _isLoading = false;
+  final bool _isLoading = false;
   String _eventName = '';
   String _category = '';
 
@@ -63,75 +60,38 @@ class ParticipantListScreenState extends State<ParticipantListScreen>
   }
 
   Future<void> _fetchParticipants() async {
-    setState(() {
-      _isLoading = true;
-    });
-
     try {
-      final formattedDate = DateFormat('yyyy-MM-dd').format(widget.eventDate);
-      final response = await http.get(Uri.parse(
-          'http://10.0.2.2:3000/api/v1/analytics/${widget.eventId}?date=$formattedDate'));
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        final List<dynamic> participantsData =
-            jsonData['data']['event']['participants'];
+      // Provide the event ID and date for which you want to fetch participants
+      int eventId = widget.eventId; // Your event ID here
+      DateTime eventDate =
+          DateTime.now(); // Date for which you want to fetch participants
 
-        setState(() {
-          _eventName = jsonData['data']['event']['eventName'];
-          _category = jsonData['data']['event']['category'];
+      // Call the fetchParticipants method from ParticipantService
+      Map<String, dynamic> participantData =
+          await ParticipantService.fetchParticipants(eventId, eventDate);
 
-          _participants = participantsData
-              .map((data) => Participant(
-                    participantId: data['participantId'],
-                    participantName: data['participantName'],
-                    participationMode: data['eventparticipantmapping']
-                        ['participationMode'],
-                  ))
-              .toList();
-          _originalParticipants = List.from(_participants); // Copy list
-          _participants
-              .sort((a, b) => a.participantName.compareTo(b.participantName));
-          _isLoading = false;
-        });
-      } else {
-        throw Exception('Failed to load participants');
-      }
-    } catch (error) {
+      // Update state with fetched data
       setState(() {
-        _isLoading = false;
+        _eventName = participantData['eventName'];
+        _category = participantData['category'];
+        _participants = participantData['participants'];
       });
+    } catch (error) {
+      // Handle any errors that occurred during the fetch operation
+      print('Error fetching participants: $error');
     }
   }
 
   Future<void> _updateParticipationMode(
       int participantId, int mode, DateTime date) async {
     try {
-      final response = await http.patch(
-        Uri.parse('http://10.0.2.2:3000/api/v1/analytics/${widget.eventId}'),
-        body: json.encode({
-          'participantId': participantId,
-          'participationMode': mode,
-          'date': DateFormat('yyyy-MM-dd').format(date)
-        }),
-        headers: {'Content-Type': 'application/json'},
-      );
-      if (response.statusCode == 200) {
-        setState(() {
-          // Update mode in the original list without changing its position
-          final participantIndex = _originalParticipants
-              .indexWhere((p) => p.participantId == participantId);
-          if (participantIndex != -1) {
-            _originalParticipants[participantIndex].participationMode = mode;
-            _participants =
-                List.from(_originalParticipants); // Update displayed list
-            _participants
-                .sort((a, b) => a.participantName.compareTo(b.participantName));
-          }
-        });
-      } else {
-        throw Exception('Failed to update participation mode');
-      }
+      int eventId = widget.eventId; // Your event ID here
+
+      // Call the updateParticipationMode method from ParticipantService
+      await ParticipantService.updateParticipationMode(
+          eventId, participantId, mode, date);
     } catch (error) {
+      // Handle any errors that occurred during the update operation
       print('Error updating participation mode: $error');
     }
   }
