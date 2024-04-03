@@ -1,3 +1,5 @@
+// analytics_data.dart
+
 class AnalyticsData {
   final List<String> dates;
   final List<double> officeCounts;

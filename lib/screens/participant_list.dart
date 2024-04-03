@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:opscheck/models/model_participant.dart';
-import 'package:opscheck/services/Participant_service.dart';
+import 'package:opscheck/services/participant_service.dart';
 import 'summary_report.dart';
 
 class ModeIcon extends StatelessWidget {

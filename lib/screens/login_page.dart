@@ -113,7 +113,7 @@ class LoginScreen extends StatelessWidget {
                   value: locale.languageCode,
                   child: Text(
                     locale.languageCode.toUpperCase(),
-                    style: TextStyle(color: Colors.black),
+                    style: const TextStyle(color: Colors.black),
                   ),
                 ),
               )

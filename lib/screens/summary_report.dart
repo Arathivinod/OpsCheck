@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'dart:math';
-import 'package:opscheck/services/Analytics_Service.dart';
+import 'package:opscheck/services/analytics_service.dart';
 import 'package:opscheck/models/analytics_data.dart'; // Import the AnalyticsData model
 
 class ModeIcon extends StatelessWidget {
