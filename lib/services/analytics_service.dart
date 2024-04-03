@@ -1,12 +1,14 @@
+// analytics_service.dart
+
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:opscheck/services/event_service.dart';
+import 'package:opscheck/models/analytics_data.dart'; // Replace 'your_project_name' with your actual project name
 
 class AnalyticsService {
-  // static const String baseUrl = 'http://10.0.2.2:3000/api/v1/analytics';
   static const baseUrl = EventService.baseUrl;
 
-  static Future<Map<String, dynamic>> fetchData(
+  static Future<AnalyticsData> fetchData(
       String startDate, String endDate, int eventId) async {
     final response = await http.get(Uri.parse(
         '$baseUrl/?limit=2000&startDate=$startDate&endDate=$endDate&filterBy=eventId&filterValue=$eventId'));
@@ -49,12 +51,12 @@ class AnalyticsService {
         absentCounts.add(absentCount);
       });
 
-      return {
-        'dates': dates,
-        'officeCounts': officeCounts,
-        'wfhCounts': wfhCounts,
-        'absentCounts': absentCounts,
-      };
+      return AnalyticsData(
+        dates: dates,
+        officeCounts: officeCounts,
+        wfhCounts: wfhCounts,
+        absentCounts: absentCounts,
+      );
     } else {
       throw Exception('Failed to load data: ${response.statusCode}');
     }

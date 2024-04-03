@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'dart:math';
+import 'package:opscheck/services/Analytics_Service.dart';
+import 'package:opscheck/models/analytics_data.dart'; // Import the AnalyticsData model
 
 class ModeIcon extends StatelessWidget {
   final IconData icon;
@@ -44,9 +44,6 @@ class EventDetailsScreen extends StatefulWidget {
   _EventDetailsScreenState createState() => _EventDetailsScreenState();
 }
 
-@override
-_EventDetailsScreenState createState() => _EventDetailsScreenState();
-
 class _EventDetailsScreenState extends State<EventDetailsScreen> {
   late String _selectedTimeRange;
   late DateTime _startDate;
@@ -68,7 +65,6 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   }
 
   void _calculateDateRange(String selectedTimeRange) {
-    // DateTime now = DateTime.now();
     switch (selectedTimeRange) {
       case 'This Week':
         _startDate = widget.selectedDate
@@ -92,56 +88,21 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     String formattedStartDate = DateFormat('yyyy-MM-dd').format(_startDate);
     String formattedEndDate = DateFormat('yyyy-MM-dd').format(_endDate);
 
-    // Call fetchDataFromAPI() with formatted dates
-    _fetchDataFromAPI(formattedStartDate, formattedEndDate);
+    // Call fetchDataFromService() with formatted dates
+    _fetchDataFromService(formattedStartDate, formattedEndDate);
   }
 
-  Future<void> _fetchDataFromAPI(String startDate, String endDate) async {
-    final response = await http.get(Uri.parse(
-        'http://10.0.2.2:3000/api/v1/analytics/?limit=2000&startDate=$startDate&endDate=$endDate&filterBy=eventId&filterValue=${widget.eventId}'));
-
-    if (response.statusCode == 200) {
-      final jsonData = json.decode(response.body);
-      print(jsonData);
-      final eventsByDate = jsonData['data']['eventsWithParticipantsByDate'];
-
-      _dates.clear();
-      _officeCounts.clear();
-      _wfhCounts.clear();
-      _absentCounts.clear();
-
-      eventsByDate.forEach((dayData) {
-        final date = dayData['date'];
-        final events = dayData['events'];
-
-        double officeCount = 0;
-        double wfhCount = 0;
-        double absentCount = 0;
-
-        events.forEach((eventDetails) {
-          final participants = eventDetails['participants'];
-
-          participants.forEach((participant) {
-            final mode = participant['participationMode'];
-            if (mode == 1) {
-              officeCount++;
-            } else if (mode == 2) {
-              wfhCount++;
-            } else if (mode == 3) {
-              absentCount++;
-            }
-          });
-        });
-
-        _dates.add(date);
-        _officeCounts.add(officeCount);
-        _wfhCounts.add(wfhCount);
-        _absentCounts.add(absentCount);
-      });
-
+  Future<void> _fetchDataFromService(String startDate, String endDate) async {
+    try {
+      AnalyticsData data =
+          await AnalyticsService.fetchData(startDate, endDate, widget.eventId);
+      _dates = data.dates;
+      _officeCounts = data.officeCounts;
+      _wfhCounts = data.wfhCounts;
+      _absentCounts = data.absentCounts;
       setState(() {});
-    } else {
-      print('Failed to load data: ${response.statusCode}');
+    } catch (e) {
+      print('Failed to load data: $e');
     }
   }
 
@@ -171,9 +132,8 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         presentPercentage = (presentCount / totalParticipants) * 100;
 
         // Calculate absentPercentage
-        double totalAbsentCount = _absentCounts
-            .where((count) => count != null)
-            .fold(0, (prev, count) => (prev) + (count));
+        double totalAbsentCount =
+            _absentCounts.fold(0, (prev, count) => (prev) + (count));
         absentPercentage = (totalAbsentCount / totalParticipants) * 100;
       }
     }
