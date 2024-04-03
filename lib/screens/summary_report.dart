@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:math';
+
 class ModeIcon extends StatelessWidget {
   final IconData icon;
   final Color color;
@@ -32,7 +33,7 @@ class EventDetailsScreen extends StatefulWidget {
   final int eventId;
   final DateTime selectedDate;
 
-  EventDetailsScreen({
+  const EventDetailsScreen({
     required this.eventName,
     required this.category,
     required this.eventId,
@@ -170,18 +171,12 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         presentPercentage = (presentCount / totalParticipants) * 100;
 
         // Calculate absentPercentage
-        double totalAbsentCount = _absentCounts
-            .where((count) => count != null)
-            .fold(0, (prev, count) => (prev) + (count));
+        double totalAbsentCount =
+            _absentCounts.fold(0, (prev, count) => (prev) + (count));
+
         absentPercentage = (totalAbsentCount / totalParticipants) * 100;
       }
     }
-
-    // Print results
-    print('Present Count: $presentCount');
-    print('Total Participants: $totalParticipants');
-    print('Present Percentage: $presentPercentage');
-    print('Absent Percentage: $absentPercentage');
 
     return Scaffold(
       body: SingleChildScrollView(
