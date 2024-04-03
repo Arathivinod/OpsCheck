@@ -1,22 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:provider/provider.dart';
+import 'package:opscheck/models/locale_provider.dart';
 import 'event_list.dart';
 
-class LoginScreen extends StatefulWidget {
-  final Function(Locale) changeLocale;
-
-  const LoginScreen({Key? key, required this.changeLocale}) : super(key: key);
-
-  @override
-  LoginScreenState createState() => LoginScreenState();
-}
-
-class LoginScreenState extends State<LoginScreen> {
-  final _formKey = GlobalKey<FormState>();
-  late String? employeeId;
-  late String? password;
-  String _selectedLanguage = 'en'; // Default language code is 'en'
-
+class LoginScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -28,7 +16,6 @@ class LoginScreenState extends State<LoginScreen> {
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Form(
-          key: _formKey,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -61,14 +48,14 @@ class LoginScreenState extends State<LoginScreen> {
                   }
                   return null;
                 },
-                onSaved: (value) => employeeId = value,
+                onSaved: (value) {}, // Handle the saved value as needed
               ),
               const SizedBox(height: 20),
               TextFormField(
                 obscureText: true,
                 decoration: InputDecoration(
                   labelText: AppLocalizations.of(context)!.password,
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -79,21 +66,18 @@ class LoginScreenState extends State<LoginScreen> {
                   }
                   return null;
                 },
-                onSaved: (value) => password = value,
+                onSaved: (value) {}, // Handle the saved value as needed
               ),
               const SizedBox(height: 20),
               ElevatedButton.icon(
                 onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    _formKey.currentState!.save();
-
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const EventListScreen()),
-                      (route) => false,
-                    );
-                  }
+                  // Handle login button press
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const EventListScreen()),
+                    (route) => false,
+                  );
                 },
                 icon: const Icon(Icons.login),
                 label: Text(AppLocalizations.of(context)!.login),
@@ -114,28 +98,28 @@ class LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildLanguageDropdownButton(BuildContext context) {
-    return DropdownButton<String>(
-      value: _selectedLanguage,
-      onChanged: (languageCode) {
-        if (languageCode != null) {
-          setState(() {
-            _selectedLanguage = languageCode;
-          });
-          widget.changeLocale(Locale(languageCode));
-        }
+    return Consumer<LocaleProvider>(
+      builder: (context, localeProvider, _) {
+        return DropdownButton<String>(
+          value: localeProvider.currentLocale.languageCode,
+          onChanged: (languageCode) {
+            if (languageCode != null) {
+              localeProvider.changeLocale(Locale(languageCode));
+            }
+          },
+          items: AppLocalizations.supportedLocales
+              .map(
+                (locale) => DropdownMenuItem<String>(
+                  value: locale.languageCode,
+                  child: Text(
+                    locale.languageCode.toUpperCase(),
+                    style: TextStyle(color: Colors.black),
+                  ),
+                ),
+              )
+              .toList(),
+        );
       },
-      items: AppLocalizations.supportedLocales
-          .map(
-            (locale) => DropdownMenuItem<String>(
-              value: locale.languageCode,
-              child: Text(
-                locale.languageCode.toUpperCase(),
-                style:
-                    TextStyle(color: Colors.black), // Set font color to black
-              ),
-            ),
-          )
-          .toList(),
     );
   }
 }

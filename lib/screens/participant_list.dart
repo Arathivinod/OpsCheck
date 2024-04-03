@@ -61,23 +61,18 @@ class ParticipantListScreenState extends State<ParticipantListScreen>
 
   Future<void> _fetchParticipants() async {
     try {
-      // Provide the event ID and date for which you want to fetch participants
-      int eventId = widget.eventId; // Your event ID here
-      DateTime eventDate =
-          DateTime.now(); // Date for which you want to fetch participants
+      int eventId = widget.eventId;
+      DateTime eventDate = widget.eventDate;
 
-      // Call the fetchParticipants method from ParticipantService
       Map<String, dynamic> participantData =
           await ParticipantService.fetchParticipants(eventId, eventDate);
 
-      // Update state with fetched data
       setState(() {
         _eventName = participantData['eventName'];
         _category = participantData['category'];
         _participants = participantData['participants'];
       });
     } catch (error) {
-      // Handle any errors that occurred during the fetch operation
       print('Error fetching participants: $error');
     }
   }
@@ -85,13 +80,17 @@ class ParticipantListScreenState extends State<ParticipantListScreen>
   Future<void> _updateParticipationMode(
       int participantId, int mode, DateTime date) async {
     try {
-      int eventId = widget.eventId; // Your event ID here
+      int eventId = widget.eventId;
 
-      // Call the updateParticipationMode method from ParticipantService
       await ParticipantService.updateParticipationMode(
           eventId, participantId, mode, date);
+
+      setState(() {
+        Participant participant =
+            _participants.firstWhere((p) => p.participantId == participantId);
+        participant.participationMode = mode;
+      });
     } catch (error) {
-      // Handle any errors that occurred during the update operation
       print('Error updating participation mode: $error');
     }
   }
