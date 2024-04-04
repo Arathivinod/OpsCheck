@@ -1,33 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'dart:math';
-import 'package:opscheck/services/analytics_service.dart';
-import 'package:opscheck/models/analytics_data.dart'; // Import the AnalyticsData model
+import 'package:fl_chart/fl_chart.dart';
+import 'package:opscheck/providers/analytics_provider.dart';
+import 'package:provider/provider.dart';
 
-class ModeIcon extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final String label;
-
-  const ModeIcon({
-    required this.icon,
-    required this.color,
-    required this.label,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Icon(icon, color: color),
-        Text(label, style: TextStyle(color: color)),
-      ],
-    );
-  }
-}
-
-class EventDetailsScreen extends StatefulWidget {
+class EventDetailsScreen extends StatelessWidget {
   final String eventName;
   final String category;
   final int eventId;
@@ -41,10 +19,44 @@ class EventDetailsScreen extends StatefulWidget {
   });
 
   @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (context) => AnalyticsDataProvider(),
+      child: Consumer<AnalyticsDataProvider>(
+        builder: (context, analyticsProvider, _) {
+          return _EventDetailsScreenContent(
+            eventName: eventName,
+            category: category,
+            eventId: eventId,
+            selectedDate: selectedDate,
+            analyticsProvider: analyticsProvider,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _EventDetailsScreenContent extends StatefulWidget {
+  final String eventName;
+  final String category;
+  final int eventId;
+  final DateTime selectedDate;
+  final AnalyticsDataProvider analyticsProvider;
+
+  _EventDetailsScreenContent({
+    required this.eventName,
+    required this.category,
+    required this.eventId,
+    required this.selectedDate,
+    required this.analyticsProvider,
+  });
+
+  @override
   _EventDetailsScreenState createState() => _EventDetailsScreenState();
 }
 
-class _EventDetailsScreenState extends State<EventDetailsScreen> {
+class _EventDetailsScreenState extends State<_EventDetailsScreenContent> {
   late String _selectedTimeRange;
   late DateTime _startDate;
   late DateTime _endDate;
@@ -94,13 +106,8 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
 
   Future<void> _fetchDataFromService(String startDate, String endDate) async {
     try {
-      AnalyticsData data =
-          await AnalyticsService.fetchData(startDate, endDate, widget.eventId);
-      _dates = data.dates;
-      _officeCounts = data.officeCounts;
-      _wfhCounts = data.wfhCounts;
-      _absentCounts = data.absentCounts;
-      setState(() {});
+      await widget.analyticsProvider
+          .fetchData(startDate, endDate, widget.eventId);
     } catch (e) {
       print('Failed to load data: $e');
     }
@@ -114,15 +121,21 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     double presentPercentage = 0;
     double absentPercentage = 0;
 
+    // Retrieve data from the provider
+    _dates = widget.analyticsProvider.dates ?? [];
+    _officeCounts = widget.analyticsProvider.officeCounts ?? [];
+    _wfhCounts = widget.analyticsProvider.wfhCounts ?? [];
+    _absentCounts = widget.analyticsProvider.absentCounts ?? [];
+
     // Check if _wfhCounts and _officeCounts are not null and not empty before calculating presentCount
-    if (_wfhCounts.isNotEmpty == true && _officeCounts.isNotEmpty == true) {
+    if (_wfhCounts.isNotEmpty && _officeCounts.isNotEmpty) {
       // Calculate presentCount by summing elements in _wfhCounts and _officeCounts
       presentCount = _wfhCounts.reduce((a, b) => (a) + (b)) +
           _officeCounts.reduce((a, b) => (a) + (b));
     }
 
     // Check if _absentCounts is not null and not empty before calculating totalParticipants and percentages
-    if (_absentCounts.isNotEmpty == true) {
+    if (_absentCounts.isNotEmpty) {
       // Calculate totalParticipants by adding presentCount and sum of elements in _absentCounts
       totalParticipants =
           presentCount + _absentCounts.reduce((a, b) => (a) + (b));
@@ -165,8 +178,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   ),
                   Container(
                     height: 30,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10), // Add padding to center text
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
                     decoration: BoxDecoration(
                       border: Border.all(
                         color: Colors.grey,
@@ -200,14 +212,13 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                         return DropdownMenuItem<String>(
                           value: value,
                           child: Align(
-                            // Align text to the center
                             alignment: Alignment.center,
                             child: Text(value),
                           ),
                         );
                       }).toList(),
                       style: const TextStyle(color: Colors.black),
-                      underline: Container(), // Remove underline
+                      underline: Container(),
                     ),
                   ),
                 ],

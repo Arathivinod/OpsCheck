@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:opscheck/models/locale_provider.dart';
+import 'package:opscheck/providers/locale_provider.dart';
 import 'event_list.dart';
 
 class LoginScreen extends StatelessWidget {

@@ -23,4 +23,12 @@ class AnalyticsData {
           List<double>.from(json['absentCounts'].map((x) => x.toDouble())),
     );
   }
+  factory AnalyticsData.empty() {
+    return AnalyticsData(
+      dates: [],
+      officeCounts: [],
+      wfhCounts: [],
+      absentCounts: [],
+    );
+  }
 }

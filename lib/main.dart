@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:opscheck/screens/login_page.dart';
 import 'package:provider/provider.dart';
-import 'package:opscheck/models/locale_provider.dart';
+import 'package:opscheck/providers/locale_provider.dart';
+import 'package:opscheck/providers/analytics_provider.dart'; // Import the AnalyticsDataProvider
 
 void main() {
   runApp(MyApp());
@@ -11,10 +12,18 @@ void main() {
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => LocaleProvider(), // Provide LocaleProvider
-      child: Consumer<LocaleProvider>(
-        builder: (context, localeProvider, _) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => LocaleProvider(),
+        ), // Provide LocaleProvider
+        ChangeNotifierProvider(
+          create: (_) =>
+              AnalyticsDataProvider(), // Provide AnalyticsDataProvider
+        ),
+      ],
+      child: Consumer2<LocaleProvider, AnalyticsDataProvider>(
+        builder: (context, localeProvider, analyticsDataProvider, _) {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -32,12 +41,12 @@ class MyApp extends StatelessWidget {
                 iconTheme: IconThemeData(color: Colors.white),
               ),
               textTheme: const TextTheme(
-                bodyLarge: TextStyle(
+                bodyText1: TextStyle(
                   fontSize: 16.0,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
                 ),
-                titleMedium: TextStyle(
+                headline6: TextStyle(
                   fontSize: 10.0,
                   fontWeight: FontWeight.normal,
                   color: Colors.grey,
