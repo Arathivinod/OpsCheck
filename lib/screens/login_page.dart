@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:provider/provider.dart';
-import 'package:opscheck/providers/locale_provider.dart';
+import 'package:opscheck/blocs/locale_bloc.dart';
 import 'event_list.dart';
 
 class LoginScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final localeBloc = BlocProvider.of<LocaleBloc>(context);
     return Scaffold(
       appBar: AppBar(
         actions: [
-          _buildLanguageDropdownButton(context),
+          _buildLanguageDropdownButton(context, localeBloc),
         ],
       ),
       body: Padding(
@@ -97,20 +98,21 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLanguageDropdownButton(BuildContext context) {
-    return Consumer<LocaleProvider>(
-      builder: (context, localeProvider, _) {
-        return DropdownButton<String>(
-          value: localeProvider.currentLocale.languageCode,
-          onChanged: (languageCode) {
-            if (languageCode != null) {
-              localeProvider.changeLocale(Locale(languageCode));
+  Widget _buildLanguageDropdownButton(
+      BuildContext context, LocaleBloc localeBloc) {
+    return BlocBuilder<LocaleBloc, LocaleState>(
+      builder: (context, state) {
+        return DropdownButton<Locale>(
+          value: (state is LocaleChanged) ? state.currentLocale : null,
+          onChanged: (newLocale) {
+            if (newLocale != null) {
+              localeBloc.add(ChangeLocaleEvent(newLocale));
             }
           },
           items: AppLocalizations.supportedLocales
               .map(
-                (locale) => DropdownMenuItem<String>(
-                  value: locale.languageCode,
+                (locale) => DropdownMenuItem<Locale>(
+                  value: locale,
                   child: Text(
                     locale.languageCode.toUpperCase(),
                     style: const TextStyle(color: Colors.black),
