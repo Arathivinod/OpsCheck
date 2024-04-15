@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:opscheck/bloc/analytics/analytics_state.dart';
 import 'package:opscheck/screens/login_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:opscheck/blocs/analytics_bloc.dart';
-import 'package:opscheck/blocs/locale_bloc.dart'; // Import the AnalyticsDataProvider
+import 'package:opscheck/bloc/analytics/analytics_bloc.dart';
+import 'package:opscheck/bloc/locale/locale_bloc.dart';
+import 'package:opscheck/bloc/locale/locale_state.dart';
+import 'package:opscheck/services/analytics_service.dart';
 
 void main() {
   runApp(MyApp());
@@ -21,7 +24,7 @@ class MyApp extends StatelessWidget {
         ),
         BlocProvider<AnalyticsBloc>(
           // Provide AnalyticsBloc
-          create: (_) => AnalyticsBloc(),
+          create: (_) => AnalyticsBloc(AnalyticsService()),
         ),
       ],
       child:

@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'dart:math';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:opscheck/providers/analytics_provider.dart';
-import 'package:provider/provider.dart';
+import 'package:opscheck/bloc/analytics/analytics_bloc.dart';
+
+import 'package:opscheck/bloc/analytics/analytics_event.dart';
+import 'package:opscheck/bloc/analytics/analytics_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:opscheck/services/analytics_service.dart';
 
 class EventDetailsScreen extends StatelessWidget {
   final String eventName;
@@ -20,18 +24,13 @@ class EventDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => AnalyticsDataProvider(),
-      child: Consumer<AnalyticsDataProvider>(
-        builder: (context, analyticsProvider, _) {
-          return _EventDetailsScreenContent(
-            eventName: eventName,
-            category: category,
-            eventId: eventId,
-            selectedDate: selectedDate,
-            analyticsProvider: analyticsProvider,
-          );
-        },
+    return BlocProvider(
+      create: (context) => AnalyticsBloc(AnalyticsService()),
+      child: _EventDetailsScreenContent(
+        eventName: eventName,
+        category: category,
+        eventId: eventId,
+        selectedDate: selectedDate,
       ),
     );
   }
@@ -42,14 +41,12 @@ class _EventDetailsScreenContent extends StatefulWidget {
   final String category;
   final int eventId;
   final DateTime selectedDate;
-  final AnalyticsDataProvider analyticsProvider;
 
   _EventDetailsScreenContent({
     required this.eventName,
     required this.category,
     required this.eventId,
     required this.selectedDate,
-    required this.analyticsProvider,
   });
 
   @override
@@ -64,6 +61,7 @@ class _EventDetailsScreenState extends State<_EventDetailsScreenContent> {
   late List<double> _officeCounts;
   late List<double> _wfhCounts;
   late List<double> _absentCounts;
+  late final AnalyticsBloc _analyticsBloc;
 
   @override
   void initState() {
@@ -73,7 +71,18 @@ class _EventDetailsScreenState extends State<_EventDetailsScreenContent> {
     _wfhCounts = [];
     _absentCounts = [];
     _selectedTimeRange = 'Day';
-    _calculateDateRange(_selectedTimeRange);
+    _analyticsBloc = BlocProvider.of<AnalyticsBloc>(context);
+    _fetchAnalyticsData(); // Fetch data when the screen is initialized
+  }
+
+  void _fetchAnalyticsData() {
+    final startDate = DateFormat('yyyy-MM-dd').format(widget.selectedDate);
+    final endDate = DateFormat('yyyy-MM-dd').format(widget.selectedDate);
+    _analyticsBloc.add(FetchAnalyticsData(
+      startDate: startDate,
+      endDate: endDate,
+      eventId: widget.eventId,
+    ));
   }
 
   void _calculateDateRange(String selectedTimeRange) {
@@ -104,13 +113,16 @@ class _EventDetailsScreenState extends State<_EventDetailsScreenContent> {
     _fetchDataFromService(formattedStartDate, formattedEndDate);
   }
 
-  Future<void> _fetchDataFromService(String startDate, String endDate) async {
-    try {
-      await widget.analyticsProvider
-          .fetchData(startDate, endDate, widget.eventId);
-    } catch (e) {
-      print('Failed to load data: $e');
-    }
+  void _fetchDataFromService(String startDate, String endDate) {
+    // Access the AnalyticsBloc instance
+    final analyticsBloc = BlocProvider.of<AnalyticsBloc>(context);
+
+    // Dispatch an event to fetch data
+    analyticsBloc.add(FetchAnalyticsData(
+      startDate: startDate,
+      endDate: endDate,
+      eventId: widget.eventId,
+    ));
   }
 
   @override
@@ -121,250 +133,265 @@ class _EventDetailsScreenState extends State<_EventDetailsScreenContent> {
     double presentPercentage = 0;
     double absentPercentage = 0;
 
-    // Retrieve data from the provider
-    _dates = widget.analyticsProvider.dates ?? [];
-    _officeCounts = widget.analyticsProvider.officeCounts ?? [];
-    _wfhCounts = widget.analyticsProvider.wfhCounts ?? [];
-    _absentCounts = widget.analyticsProvider.absentCounts ?? [];
-
-    // Check if _wfhCounts and _officeCounts are not null and not empty before calculating presentCount
-    if (_wfhCounts.isNotEmpty && _officeCounts.isNotEmpty) {
-      // Calculate presentCount by summing elements in _wfhCounts and _officeCounts
-      presentCount = _wfhCounts.reduce((a, b) => (a) + (b)) +
-          _officeCounts.reduce((a, b) => (a) + (b));
-    }
-
-    // Check if _absentCounts is not null and not empty before calculating totalParticipants and percentages
-    if (_absentCounts.isNotEmpty) {
-      // Calculate totalParticipants by adding presentCount and sum of elements in _absentCounts
-      totalParticipants =
-          presentCount + _absentCounts.reduce((a, b) => (a) + (b));
-
-      // Calculate presentPercentage
-      if (totalParticipants != 0) {
-        presentPercentage = (presentCount / totalParticipants) * 100;
-
-        // Calculate absentPercentage
-        double totalAbsentCount =
-            _absentCounts.fold(0, (prev, count) => (prev) + (count));
-        absentPercentage = (totalAbsentCount / totalParticipants) * 100;
-      }
-    }
-
-    // Print results
-    print('Present Count: $presentCount');
-    print('Total Participants: $totalParticipants');
-    print('Present Percentage: $presentPercentage');
-    print('Absent Percentage: $absentPercentage');
-
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: BlocBuilder<AnalyticsBloc, AnalyticsState>(
+        builder: (context, state) {
+          if (state is AnalyticsLoading) {
+            return Center(
+              child: CircularProgressIndicator(),
+            );
+          } else if (state is AnalyticsLoaded) {
+            _dates = state.analyticsData.dates;
+            _officeCounts = state.analyticsData.officeCounts;
+            _wfhCounts = state.analyticsData.wfhCounts;
+            _absentCounts = state.analyticsData.absentCounts;
+
+            // Check if _wfhCounts and _officeCounts are not null and not empty before calculating presentCount
+            if (_wfhCounts.isNotEmpty && _officeCounts.isNotEmpty) {
+              // Calculate presentCount by summing elements in _wfhCounts and _officeCounts
+              presentCount = _wfhCounts.reduce((a, b) => (a) + (b)) +
+                  _officeCounts.reduce((a, b) => (a) + (b));
+            }
+
+            // Check if _absentCounts is not null and not empty before calculating totalParticipants and percentages
+            if (_absentCounts.isNotEmpty) {
+              // Calculate totalParticipants by adding presentCount and sum of elements in _absentCounts
+              totalParticipants =
+                  presentCount + _absentCounts.reduce((a, b) => (a) + (b));
+
+              // Calculate presentPercentage
+              if (totalParticipants != 0) {
+                presentPercentage = (presentCount / totalParticipants) * 100;
+
+                // Calculate absentPercentage
+                double totalAbsentCount =
+                    _absentCounts.fold(0, (prev, count) => (prev) + (count));
+                absentPercentage = (totalAbsentCount / totalParticipants) * 100;
+              }
+            }
+
+            // Print results
+            print('Present Count: $presentCount');
+            print('Total Participants: $totalParticipants');
+            print('Present Percentage: $presentPercentage');
+            print('Absent Percentage: $absentPercentage');
+
+            return SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '${widget.eventName} - ${widget.category}',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  Container(
-                    height: 30,
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: Colors.grey,
-                        style: BorderStyle.solid,
-                        width: 1,
-                      ),
-                      borderRadius: BorderRadius.circular(15.0),
-                    ),
-                    child: DropdownButton<String>(
-                      value: _selectedTimeRange,
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          _selectedTimeRange = newValue!;
-                          if (_selectedTimeRange == 'Day') {
-                            _calculateDateRange('Day');
-                          } else if (_selectedTimeRange == 'This Week') {
-                            _calculateDateRange('This Week');
-                          } else if (_selectedTimeRange == 'This Month') {
-                            _calculateDateRange('This Month');
-                          } else if (_selectedTimeRange == 'Custom') {
-                            // _calculateDateRange('Custom');
-                          }
-                        });
-                      },
-                      items: <String>[
-                        'Day',
-                        'This Week',
-                        'This Month',
-                        'Custom'
-                      ].map<DropdownMenuItem<String>>((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Align(
-                            alignment: Alignment.center,
-                            child: Text(value),
-                          ),
-                        );
-                      }).toList(),
-                      style: const TextStyle(color: Colors.black),
-                      underline: Container(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 5),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildCountContainer('Present', presentCount.toInt()),
-                _buildCountContainer(
-                  'Absent',
-                  _absentCounts.isNotEmpty
-                      ? _absentCounts.reduce((a, b) => (a) + (b)).toInt()
-                      : 0,
-                ),
-                _buildCountContainer(
-                  'WFH',
-                  _wfhCounts.isNotEmpty
-                      ? _wfhCounts.reduce((a, b) => (a) + (b)).toInt()
-                      : 0,
-                ),
-              ],
-            ),
-            Container(
-              margin: const EdgeInsets.all(12),
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: Colors.grey,
-                  width: 1,
-                ),
-              ),
-              height: 250,
-              width: 400,
-              child: BarChart(
-                BarChartData(
-                  alignment: BarChartAlignment.spaceAround,
-                  maxY: _calculateMaxY(),
-                  barTouchData: BarTouchData(enabled: false),
-                  titlesData: FlTitlesData(
-                    show: true,
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                          showTitles: true,
-                          reservedSize: 28,
-                          getTitlesWidget: (value, _) {
-                            switch (_selectedTimeRange) {
-                              case 'Day':
-                                int index = value.toInt();
-                                switch (index) {
-                                  case 0:
-                                    return const Text('WFH');
-                                  case 1:
-                                    return const Text('Office');
-                                  case 2:
-                                    return const Text('Not attended');
-                                  default:
-                                    break; // Return an empty string for other values
-                                }
-                              // return SizedBox();
-                              case 'This Week':
-                                DateTime date = DateTime.parse(
-                                    _dates.reversed.toList()[value
-                                        .toInt()]); // Get the date for the index
-                                return Text(DateFormat('E').format(
-                                    date)); // Return the day name (e.g., Mon, Tue)
-                              default:
-                                break;
-                            }
-                            return const SizedBox();
-                          }),
-                    ),
-                    leftTitles: const AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 40,
-                      ),
-                    ),
-                    topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  barGroups: _buildBarGroups(),
-                ),
-              ),
-            ),
-            // SizedBox(height: 10),
-            Stack(
-              children: [
-                Container(
-                  margin: const EdgeInsets.all(12),
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: Colors.grey,
-                      width: 1,
-                    ),
-                  ),
-                  height: 200,
-                  child: PieChart(
-                    PieChartData(
-                      sections: [
-                        PieChartSectionData(
-                          color: Colors.blue,
-                          value: presentPercentage,
-                          title: presentPercentage.toStringAsFixed(2) + '%',
-                          titleStyle: const TextStyle(
-                            color: Colors.black,
-                            fontSize: 16,
+                  Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '${widget.eventName} - ${widget.category}',
+                          style: const TextStyle(
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
+                          textAlign: TextAlign.center,
                         ),
-                        PieChartSectionData(
-                          color: Colors.red,
-                          value: absentPercentage,
-                          title: absentPercentage.toStringAsFixed(2) + '%',
-                          titleStyle: const TextStyle(
-                            color: Colors.black,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                        Container(
+                          height: 30,
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: Colors.grey,
+                              style: BorderStyle.solid,
+                              width: 1,
+                            ),
+                            borderRadius: BorderRadius.circular(15.0),
+                          ),
+                          child: DropdownButton<String>(
+                            value: _selectedTimeRange,
+                            onChanged: (String? newValue) {
+                              setState(() {
+                                _selectedTimeRange = newValue!;
+                                if (_selectedTimeRange == 'Day') {
+                                  _calculateDateRange('Day');
+                                } else if (_selectedTimeRange == 'This Week') {
+                                  _calculateDateRange('This Week');
+                                } else if (_selectedTimeRange == 'This Month') {
+                                  _calculateDateRange('This Month');
+                                } else if (_selectedTimeRange == 'Custom') {
+                                  // _calculateDateRange('Custom');
+                                }
+                              });
+                            },
+                            items: <String>[
+                              'Day',
+                              'This Week',
+                              'This Month',
+                              'Custom'
+                            ].map<DropdownMenuItem<String>>((String value) {
+                              return DropdownMenuItem<String>(
+                                value: value,
+                                child: Align(
+                                  alignment: Alignment.center,
+                                  child: Text(value),
+                                ),
+                              );
+                            }).toList(),
+                            style: const TextStyle(color: Colors.black),
+                            underline: Container(),
                           ),
                         ),
                       ],
-                      sectionsSpace: 0,
-                      centerSpaceRadius: 40,
                     ),
-                    swapAnimationDuration: const Duration(milliseconds: 150),
-                    swapAnimationCurve: Curves.linear,
                   ),
-                ),
-                Positioned(
-                  top: 20,
-                  right: 20,
-                  child: LegendWidget(),
-                ),
-              ],
-            ),
-          ],
-        ),
+                  const SizedBox(height: 5),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildCountContainer('Present', presentCount.toInt()),
+                      _buildCountContainer(
+                        'Absent',
+                        _absentCounts.isNotEmpty
+                            ? _absentCounts.reduce((a, b) => (a) + (b)).toInt()
+                            : 0,
+                      ),
+                      _buildCountContainer(
+                        'WFH',
+                        _wfhCounts.isNotEmpty
+                            ? _wfhCounts.reduce((a, b) => (a) + (b)).toInt()
+                            : 0,
+                      ),
+                    ],
+                  ),
+                  Container(
+                    margin: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Colors.grey,
+                        width: 1,
+                      ),
+                    ),
+                    height: 250,
+                    width: 400,
+                    child: BarChart(
+                      BarChartData(
+                        alignment: BarChartAlignment.spaceAround,
+                        maxY: _calculateMaxY(),
+                        barTouchData: BarTouchData(enabled: false),
+                        titlesData: FlTitlesData(
+                          show: true,
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 28,
+                                getTitlesWidget: (value, _) {
+                                  switch (_selectedTimeRange) {
+                                    case 'Day':
+                                      int index = value.toInt();
+                                      switch (index) {
+                                        case 0:
+                                          return const Text('WFH');
+                                        case 1:
+                                          return const Text('Office');
+                                        case 2:
+                                          return const Text('Not attended');
+                                        default:
+                                          break; // Return an empty string for other values
+                                      }
+                                    // return SizedBox();
+                                    case 'This Week':
+                                      DateTime date = DateTime.parse(
+                                          _dates.reversed.toList()[value
+                                              .toInt()]); // Get the date for the index
+                                      return Text(DateFormat('E').format(
+                                          date)); // Return the day name (e.g., Mon, Tue)
+                                    default:
+                                      break;
+                                  }
+                                  return const SizedBox();
+                                }),
+                          ),
+                          leftTitles: const AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 40,
+                            ),
+                          ),
+                          topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                        ),
+                        borderData: FlBorderData(show: false),
+                        barGroups: _buildBarGroups(),
+                      ),
+                    ),
+                  ),
+                  // SizedBox(height: 10),
+                  Stack(
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: Colors.grey,
+                            width: 1,
+                          ),
+                        ),
+                        height: 200,
+                        child: PieChart(
+                          PieChartData(
+                            sections: [
+                              PieChartSectionData(
+                                color: Colors.blue,
+                                value: presentPercentage,
+                                title:
+                                    presentPercentage.toStringAsFixed(2) + '%',
+                                titleStyle: const TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              PieChartSectionData(
+                                color: Colors.red,
+                                value: absentPercentage,
+                                title:
+                                    absentPercentage.toStringAsFixed(2) + '%',
+                                titleStyle: const TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                            sectionsSpace: 0,
+                            centerSpaceRadius: 40,
+                          ),
+                          swapAnimationDuration:
+                              const Duration(milliseconds: 150),
+                          swapAnimationCurve: Curves.linear,
+                        ),
+                      ),
+                      Positioned(
+                        top: 20,
+                        right: 20,
+                        child: LegendWidget(),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          } else {
+            // Handle other states if needed
+            return Container(); // Placeholder, you can return any widget here
+          }
+        },
       ),
     );
   }
